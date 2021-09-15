@@ -12,6 +12,9 @@ class ArduinoPacket:
         self.rand_id = self.UNKNOWN_RANDOM_ID
         self.data = []
 
+    def decode_packet(self):
+        pass
+
     def decode(self):
         assert len(self.data) == self.PACKET_LENGTH
 
@@ -21,8 +24,7 @@ class ArduinoPacket:
 
         assert len(self.data) == self.DATA_LENGTH
 
-    def decode_packet(self):
-        pass
+        self.decode_packet()
 
 
 class RightSteppingMotorAlertPacket(ArduinoPacket):
@@ -58,6 +60,10 @@ class DistanceSensorResultPacket(ArduinoPacket):
 
     def __init__(self, data):
         super(DistanceSensorResultPacket, self).__init__(data)
+        self.distance = -1.0  # 対面する壁からの距離(mm)
+
+    def decode_packet(self):
+        pass  # TODO
 
 
 class LineTracerResultPacket(ArduinoPacket):
@@ -65,19 +71,24 @@ class LineTracerResultPacket(ArduinoPacket):
 
     def __init__(self, data):
         super(LineTracerResultPacket, self).__init__(data)
+        self.on_line = False
+
+    def decode_packet(self):
+        pass  # TODO
+
+
+class ServoMotorFeedbackPacket(ArduinoPacket):
+    ID = 60
+
+    def __init__(self, data):
+        super(ServoMotorFeedbackPacket, self).__init__(data)
 
 
 class NineAxisSensorResultPacket(ArduinoPacket):
-    ID = 60
+    ID = 70
 
     def __init__(self, data):
         super(NineAxisSensorResultPacket, self).__init__(data)
 
-
-class ServoMotorFeedbackPacket(ArduinoPacket):
-    ID = 70
-
-    def __init__(self, data):
-        super(ServoMotorFeedbackPacket, self).__init__(data)
 
 

@@ -1,5 +1,5 @@
 from connection.arduino_to_rpi_packets import ArduinoPacket
-import arduino_manager
+from connection import connection_manager
 
 
 class SensorManager:
@@ -12,7 +12,7 @@ class SensorManager:
         self.__on_receive__(packet)
 
     def send(self):
-        arduino_manager.data_packet(self.packet)
+        connection_manager.data_packet(self.packet)
         return self
 
     def set_packet(self, packet):
