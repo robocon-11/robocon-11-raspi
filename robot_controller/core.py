@@ -5,7 +5,7 @@ from connection import connection_manager
 from sensor.sensor_mamager import SensorManager
 from connection.arduino_to_rpi_packets import *
 from connection.rpi_to_arduino_packets import *
-
+#a
 STATE_STAND_BY = 0  # 電源投入後
 STATE_PHASE_1_STARTED = 1  # 1回目に左側のS/Bラインを超えた
 STATE_PHASE_1_EXCEEDED_HALF_LINE_1 = 17  # 1回目に中心線を超えた
