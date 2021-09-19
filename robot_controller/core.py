@@ -34,12 +34,12 @@ STATE_PHASE_3_TURNED_CORNER_4 = 15
 STATE_FINISHED = 16  # 4回目に左側のS/Bラインを超えた
 
 debug = True  # デバッグモード
-
 running = True  # 実行中かどうか
 lost_ball = False  # ボールを保持しているかどうか
 state = STATE_STAND_BY  # 処理段階
 
 
+# Arduinoとの接続が完了したとき
 def on_connection_start():
     print("Process Started.")
     SensorManager() \
@@ -48,6 +48,7 @@ def on_connection_start():
         .set_on_receive(lambda pk: on_nine_axis_sensor_resulted(pk))
 
 
+# 9軸センサの計測が完了したとき
 def on_nine_axis_sensor_resulted(pk: NineAxisSensorResultPacket):
     global state
     if state == STATE_STAND_BY:
@@ -56,6 +57,7 @@ def on_nine_axis_sensor_resulted(pk: NineAxisSensorResultPacket):
         robot_manager.measure(robot_manager.measure_line_tracer(method=on_line_tracer_resulted))
 
 
+# ライントレーサの計測が完了したとき
 def on_line_tracer_resulted(pk: LineTracerResultPacket):
     if not pk.on_line:
         return
@@ -72,6 +74,7 @@ def on_line_tracer_resulted(pk: LineTracerResultPacket):
         robot_manager.measure(robot_manager.measure_distance(method=on_distance_sensor_resulted))
 
 
+# 距離センサの計測が完了したとき
 def on_distance_sensor_resulted(pk: MeasureDistanceToBallPacket):
     global state
     if state == STATE_PHASE_1_EXCEEDED_HALF_LINE_1:
@@ -81,6 +84,7 @@ def on_distance_sensor_resulted(pk: MeasureDistanceToBallPacket):
             robot_manager.rotate_right()
 
 
+# 状態監視
 def manage_state():
     thread = threading.Thread(target=_do_managing_state)
     thread.start()
@@ -93,11 +97,9 @@ def _do_managing_state():
 
 
 if __name__ == "__main__":
-    if debug:
-        manage_state()
-
+    # シリアル通信モジュールの初期化
     connection_manager.init()
 
-
-
+    if debug:
+        manage_state()
 

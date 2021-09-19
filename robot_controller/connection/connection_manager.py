@@ -9,10 +9,9 @@ from connection.packet_event_listener import PacketEventListener
 MOTOR_LEFT = 0  # 左モータ
 MOTOR_RIGHT = 1  # 右モータaa
 
-initialized = False  # Arduinoのシリアルポートが初期化されたかどうか
-
 ser: serial.Serial
 event_listener = PacketEventListener()
+initialized = False  # Arduinoのシリアルポートが初期化されたかどうか
 sending_stopped = False  # Arduinoへのパケット送信が可能かどうか
 packet_key_queue = []  # パケット（rand_id）のキュー
 packet_queue = {}  # パケットのキュー
@@ -25,7 +24,8 @@ def init():
     global ser
     ser = serial.Serial('/dev/ttyUSB0', 9600)
     if ser is None:
-        print('Error: /dev/ttyUSB0 is not found.')
+        print('\033[31m[ERROR] \033[0m/dev/ttyUSB0 is not found.')
+        exit(1)
 
     print("Starting serial receiver...")
     th = threading.Thread(target=_await_packets)
@@ -126,7 +126,7 @@ def _await_packets():
 
             # 予期しないパケットのとき
             else:
-                print("\033[31m[ERROR] \033[0mInvalid Packet Error (" + text + ")")
+                # print("\033[31m[ERROR] \033[0mInvalid Packet Error (" + text + ")")
                 continue
 
         # 受信パケットの処理
