@@ -1,6 +1,5 @@
 import random
 import struct
-import math
 import threading
 import time
 from connection import connection_manager
@@ -14,8 +13,9 @@ ROTATION_DEGREE = 90.0  # 回転時にタイヤが回る角度[deg]
 x = 0.0  # 自己位置の合計変位x
 y = 0.0  # 自己位置の合計変位y
 direction = 0.0  # degree
-measuring_distance = False
-measuring_line_tracer = False
+measuring_distance = False  # 距離を計測中かどうか
+measuring_line_tracer = False  # ライントレーサを計測中かどうか
+
 
 # 右に90度回転
 def rotate_right():

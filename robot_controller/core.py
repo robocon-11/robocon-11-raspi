@@ -80,8 +80,6 @@ def on_distance_sensor_resulted(pk: MeasureDistanceToBallPacket):
             # robot_manager.stop()
             robot_manager.rotate_right()
 
-    pass
-
 
 def manage_state():
     thread = threading.Thread(target=_do_managing_state)
@@ -90,7 +88,7 @@ def manage_state():
 
 def _do_managing_state():
     while running:
-        print("\033[31m[STATE] \033[0m" + str(state))
+        print("\033[33m[STATE] \033[0m" + str(state))
         time.sleep(1)
 
 
@@ -100,8 +98,6 @@ if __name__ == "__main__":
 
     connection_manager.init()
 
-
-# def do_rotation_phase():
 
 
 

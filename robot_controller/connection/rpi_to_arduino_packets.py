@@ -1,7 +1,7 @@
 # Raspberry Pi->Arduinoのパケット
 class RaspberryPiPacket:
     ROTATE_RIGHT_FORWARD = 0  # 右回転or前進
-    ROTATE_LEFT_RETURN = 1  # 左回転
+    ROTATE_LEFT_RETURN = 1  # 左回転or後進
     ROTATE_LOCKED = 2  # ロック
 
     MOTOR_UNLOCKED = 0  # モータをロックしない
@@ -20,20 +20,18 @@ class RaspberryPiPacket:
     def __init__(self, _rand_id):
         self.data = []
         self.packet_id = self.UNKNOWN_PACKET_ID
-        self.locked = self.MOTOR_UNLOCKED
         self.direction = self.ROTATE_RIGHT_FORWARD
         self.type = self.DATA_TYPE_1
         self.data_1 = [0 for _ in range(self.DATA_SIZE)]
         self.data_2 = [0 for _ in range(self.DATA_SIZE)]
-        self._rand_id = _rand_id
+        self.rand_id = _rand_id
 
     def encode(self):
         assert len(self.data_1) == self.DATA_SIZE
         assert len(self.data_2) == self.DATA_SIZE
 
         self.data.extend([int(x) for x in str(self.packet_id)])
-        self.data.extend([int(x) for x in str(self._rand_id)])
-        self.data.append(self.locked)
+        self.data.extend([int(x) for x in str(self.rand_id)])
         self.data.append(self.direction)
         self.data.append(self.type)
         self.data.extend(self.data_1)
@@ -102,4 +100,3 @@ class MeasureNineAxisSensorPacket(RaspberryPiPacket):
     def __init__(self, _rand_id):
         super(MeasureNineAxisSensorPacket, self).__init__(_rand_id)
         self.packet_id = self.ID
-
