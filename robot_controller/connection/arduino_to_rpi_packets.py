@@ -10,7 +10,7 @@ class ArduinoPacket:
         self.data = data
         self.packet_id = self.UNKNOWN_PACKET_ID
         self.rand_id = self.UNKNOWN_RANDOM_ID
-        self.data = []
+        self.payload = []
 
     def decode_packet(self):
         pass
@@ -20,22 +20,22 @@ class ArduinoPacket:
 
         self.packet_id = int(str(self.data[0]) + str(self.data[1]))
         self.rand_id = int(str(self.data[2]) + str(self.data[3]) + str(self.data[4]) + str(self.data[5]))
-        self.data = self.data[5:42]
+        self.payload = self.data[6:42]
 
-        assert len(self.data) == self.DATA_LENGTH
+        assert len(self.payload) == self.DATA_LENGTH
 
         self.decode_packet()
 
 
 class RightSteppingMotorAlertPacket(ArduinoPacket):
-    ID = 0
+    ID = 10
 
     def __init__(self, data):
         super(RightSteppingMotorAlertPacket, self).__init__(data)
 
 
 class RightSteppingMotorFeedbackPacket(ArduinoPacket):
-    ID = 10
+    ID = 11
 
     def __init__(self, data):
         super(RightSteppingMotorFeedbackPacket, self).__init__(data)
@@ -49,10 +49,24 @@ class LeftSteppingMotorAlertPacket(ArduinoPacket):
 
 
 class LeftSteppingMotorFeedbackPacket(ArduinoPacket):
-    ID = 30
+    ID = 21
 
     def __init__(self, data):
         super(LeftSteppingMotorFeedbackPacket, self).__init__(data)
+
+
+class BothSteppingMotorAlertPacket(ArduinoPacket):
+    ID = 30
+
+    def __init__(self, data):
+        super(BothSteppingMotorAlertPacket, self).__init__(data)
+
+
+class BothSteppingMotorFeedbackPacket(ArduinoPacket):
+    ID = 31
+
+    def __init__(self, data):
+        super(BothSteppingMotorFeedbackPacket, self).__init__(data)
 
 
 class DistanceSensorResultPacket(ArduinoPacket):
@@ -77,15 +91,22 @@ class LineTracerResultPacket(ArduinoPacket):
         pass  # TODO
 
 
-class ServoMotorFeedbackPacket(ArduinoPacket):
+class UpperServoMotorFeedbackPacket(ArduinoPacket):
     ID = 60
 
     def __init__(self, data):
-        super(ServoMotorFeedbackPacket, self).__init__(data)
+        super(UpperServoMotorFeedbackPacket, self).__init__(data)
+
+
+class BottomServoMotorFeedbackPacket(ArduinoPacket):
+    ID = 70
+
+    def __init__(self, data):
+        super(BottomServoMotorFeedbackPacket, self).__init__(data)
 
 
 class NineAxisSensorResultPacket(ArduinoPacket):
-    ID = 70
+    ID = 80
 
     def __init__(self, data):
         super(NineAxisSensorResultPacket, self).__init__(data)

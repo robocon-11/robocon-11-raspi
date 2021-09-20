@@ -12,6 +12,7 @@ class SensorManager:
         self.__on_receive__(packet)
 
     def send(self):
+        connection_manager.add_sensor_manager(self.packet.rand_id, self)
         connection_manager.data_packet(self.packet)
         return self
 

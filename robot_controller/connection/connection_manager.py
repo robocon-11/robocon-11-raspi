@@ -2,6 +2,9 @@ import serial
 import threading
 import core
 import time
+from connection.interface.connection_interface import ConnectionInterface
+from connection.interface.serial_interface import SerialInterface
+from connection.interface.network_interface import NetworkInterface
 from connection.rpi_to_arduino_packets import RaspberryPiPacket
 from connection.arduino_to_rpi_packets import *
 from connection.packet_event_listener import PacketEventListener
@@ -9,7 +12,7 @@ from connection.packet_event_listener import PacketEventListener
 MOTOR_LEFT = 0  # 左モータ
 MOTOR_RIGHT = 1  # 右モータaa
 
-ser: serial.Serial
+connection_interface = SerialInterface()  # 通信インターフェース（シリアルorネットワーク）
 event_listener = PacketEventListener()
 initialized = False  # Arduinoのシリアルポートが初期化されたかどうか
 sending_stopped = False  # Arduinoへのパケット送信が可能かどうか
@@ -18,22 +21,20 @@ packet_queue = {}  # パケットのキュー
 
 
 def init():
-    print("Initializing serial connection...")
+    print("Initializing connection interface...")
+    connection_interface.init()
 
-    # ls /devでシリアル通信先を確認!!
-    global ser
-    ser = serial.Serial('/dev/ttyUSB0', 9600)
-    if ser is None:
-        print('\033[31m[ERROR] \033[0m/dev/ttyUSB0 is not found.')
-        exit(1)
-
-    print("Starting serial receiver...")
+    print("Starting packet receiver...")
     th = threading.Thread(target=_await_packets)
     th.start()
 
-    print("Starting serial sender...")
+    print("Starting packet sender...")
     th1 = threading.Thread(target=_send_packets)
     th1.start()
+
+
+def add_sensor_manager(rand_id, sensor_manager):
+    event_listener.add_manager(rand_id, sensor_manager)
 
 
 # キューにパケットを追加する
@@ -60,20 +61,20 @@ def _send_packet(pk):
 
     if core.debug:
         print("\033[32m[SEND]\033[0m (" + str(len(raw)) + ") " + str(raw))
+        print("\033[33m[STATE] \033[0m" + str(core.instance.state))
 
-    ser.write(raw)
-    ser.flush()
+    connection_interface.send_data(raw)
 
 
 # パケット受信待機
 def _await_packets():
     global initialized
     while core.running:
-        if ser.in_waiting <= 0:
+        if connection_interface.is_waiting():
             continue
 
-        raw = ser.read_all()
-        raw_str = str(raw)
+        raw = connection_interface.read_data()
+        raw_str = str(raw).replace("\\t", "\\x09")
 
         if core.debug:
             print("\033[34m[RECEIVE]\033[0m (" + str(len(raw)) + ") " + raw_str)
@@ -101,15 +102,15 @@ def _await_packets():
                 continue
 
             # 受信信号（rand_id）
-            elif text.isdecimal():
+            elif text.isdecimal() and len(text) == 4:
                 sending_stopped = False  # パケット送信停止解除
                 del packet_queue[int(text)]
                 continue
 
             # Arduino to Raspberry Pi Packet
             # TODO RaspberryPiPacket to ArduinoPacket
-            elif len(text) >= ArduinoPacket.PACKET_LENGTH and len(text) % 4 == 0:
-                split_text = text.split("\\")
+            elif len(text) >= ArduinoPacket.PACKET_LENGTH:
+                split_text = text[1:].split("\\")
                 ids = []
                 i = 0
                 for x in split_text:
@@ -124,55 +125,68 @@ def _await_packets():
                     sending_stopped = False  # パケット送信停止解除
                     del packet_queue[int("".join(ids))]
 
+                _process_packet(pk_data)
+
             # 予期しないパケットのとき
             else:
                 # print("\033[31m[ERROR] \033[0mInvalid Packet Error (" + text + ")")
                 continue
 
-        # 受信パケットの処理
-        try:
-            packet = ArduinoPacket(pk_data)
-            packet.decode()
 
-            if packet.packet_id == RightSteppingMotorAlertPacket.ID:
-                pk = RightSteppingMotorAlertPacket(packet.data)
-                pk.decode()
-                event_listener.on_right_stepping_motor_alerted(pk)
+# 受信パケットの処理
+def _process_packet(pk_data):
+    try:
+        packet = ArduinoPacket(pk_data)
+        packet.decode()
 
-            elif packet.packet_id == RightSteppingMotorFeedbackPacket.ID:
-                pk = RightSteppingMotorFeedbackPacket(packet.data)
-                pk.decode()
-                event_listener.on_right_stepping_motor_feedback(pk)
+        if packet.packet_id == RightSteppingMotorAlertPacket.ID:
+            pk = RightSteppingMotorAlertPacket(packet.data)
+            pk.decode()
+            event_listener.on_right_stepping_motor_alerted(pk)
 
-            elif packet.packet_id == LeftSteppingMotorAlertPacket.ID:
-                pk = LeftSteppingMotorAlertPacket(packet.data)
-                pk.decode()
-                event_listener.on_left_stepping_motor_alerted(pk)
+        elif packet.packet_id == RightSteppingMotorFeedbackPacket.ID:
+            pk = RightSteppingMotorFeedbackPacket(packet.data)
+            pk.decode()
+            event_listener.on_right_stepping_motor_feedback(pk)
 
-            elif packet.packet_id == LeftSteppingMotorFeedbackPacket.ID:
-                pk = LeftSteppingMotorFeedbackPacket(packet.data)
-                pk.decode()
-                event_listener.on_left_stepping_motor_feedback(pk)
+        elif packet.packet_id == LeftSteppingMotorAlertPacket.ID:
+            pk = LeftSteppingMotorAlertPacket(packet.data)
+            pk.decode()
+            event_listener.on_left_stepping_motor_alerted(pk)
 
-            elif packet.packet_id == DistanceSensorResultPacket.ID:
-                pk = DistanceSensorResultPacket(packet.data)
-                pk.decode()
-                event_listener.on_distance_sensor_resulted(pk)
+        elif packet.packet_id == LeftSteppingMotorFeedbackPacket.ID:
+            pk = LeftSteppingMotorFeedbackPacket(packet.data)
+            pk.decode()
+            event_listener.on_left_stepping_motor_feedback(pk)
 
-            elif packet.packet_id == LineTracerResultPacket.ID:
-                pk = LineTracerResultPacket(packet.data)
-                pk.decode()
-                event_listener.on_line_tracer_resulted(pk)
+        elif packet.packet_id == DistanceSensorResultPacket.ID:
+            pk = DistanceSensorResultPacket(packet.data)
+            pk.decode()
+            event_listener.on_distance_sensor_resulted(pk)
 
-            elif packet.packet_id == NineAxisSensorResultPacket.ID:
-                pk = NineAxisSensorResultPacket(packet.data)
-                pk.decode()
-                event_listener.on_nine_axis_sensor_resulted(pk)
+        elif packet.packet_id == LineTracerResultPacket.ID:
+            pk = LineTracerResultPacket(packet.data)
+            pk.decode()
+            event_listener.on_line_tracer_resulted(pk)
 
-            elif packet.packet_id == ServoMotorFeedbackPacket.ID:
-                pk = ServoMotorFeedbackPacket(packet.data)
-                pk.decode()
-                event_listener.on_servo_motor_feedback(pk)
+        elif packet.packet_id == NineAxisSensorResultPacket.ID:
+            pk = NineAxisSensorResultPacket(packet.data)
+            pk.decode()
+            event_listener.on_nine_axis_sensor_resulted(pk)
 
-        except AssertionError:
-            continue
+        elif packet.packet_id == UpperServoMotorFeedbackPacket.ID:
+            pk = UpperServoMotorFeedbackPacket(packet.data)
+            pk.decode()
+            event_listener.on_upper_servo_motor_feedback(pk)
+
+        elif packet.packet_id == BottomServoMotorFeedbackPacket.ID:
+            pk = BottomServoMotorFeedbackPacket(packet.data)
+            pk.decode()
+            event_listener.on_bottom_servo_motor_feedback(pk)
+
+    except AssertionError as e:
+        print(e)
+        return
+
+
+

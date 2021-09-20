@@ -75,8 +75,8 @@ def stop():
 
 
 # センサを計測する
-def measure(method):
-    thread = threading.Thread(target=method)
+def measure(method, callback):
+    thread = threading.Thread(target=method, args=(callback,))
     thread.start()
 
 
@@ -131,6 +131,6 @@ def divide_data(data):
 
 # ランダムなパケットIDを生成
 def rand():
-    return random.randint(1000, 9999)
-
+    r = random.randint(1000, 9999)
+    return int(str(r).replace("9", "1"))
 
