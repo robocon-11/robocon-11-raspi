@@ -15,31 +15,30 @@ y = 0.0  # 自己位置の合計変位y
 direction = 0.0  # degree
 measuring_distance = False  # 距離を計測中かどうか
 measuring_line_tracer = False  # ライントレーサを計測中かどうか
+measuring_nine_axis = False  # 9軸センサで計測中かどうか
 
 
 # 右に90度回転
 def rotate_right():
     pk_r = RightSteppingMotorPacket(rand())
-    pk_r.locked = RightSteppingMotorPacket.MOTOR_LOCKED
     pk_r.direction = RightSteppingMotorPacket.ROTATE_LOCKED
+    pk_r.type = RightSteppingMotorPacket.DATA_TYPE_3
     connection_manager.data_packet(pk_r)
 
     pk_l = LeftSteppingMotorPacket(rand())
-    pk_l.locked = RightSteppingMotorPacket.MOTOR_UNLOCKED
     pk_l.direction = RaspberryPiPacket.ROTATE_LEFT_RETURN
-    pk_l.data_1 = create_filled_data1(ROTATION_DEGREE)
+    pk_l.type = RightSteppingMotorPacket.DATA_TYPE_3
+    # pk_l.data_1 = create_filled_data1(ROTATION_DEGREE)
     connection_manager.data_packet(pk_l)
 
 
 # 左に90度回転
 def rotate_left():
     pk_l = LeftSteppingMotorPacket(rand())
-    pk_l.locked = LeftSteppingMotorPacket.MOTOR_LOCKED
     pk_l.direction = LeftSteppingMotorPacket.ROTATE_LOCKED
     connection_manager.data_packet(pk_l)
 
     pk_r = RightSteppingMotorPacket(rand())
-    pk_r.locked = RightSteppingMotorPacket.MOTOR_UNLOCKED
     pk_r.direction = RaspberryPiPacket.ROTATE_LEFT_RETURN
     pk_r.data_1 = create_filled_data1(ROTATION_DEGREE)
     connection_manager.data_packet(pk_l)
@@ -49,7 +48,6 @@ def rotate_left():
 # @arg distance(mm)
 def go_straight_distance(distance):
     pk = BothSteppingMotorPacket(rand())
-    pk.locked = False
     pk.direction = BothSteppingMotorPacket.ROTATE_RIGHT_FORWARD
     pk.type = BothSteppingMotorPacket.DATA_TYPE_1
     # TODO 角速度と総角度 360 * distance / (TIRE_RADIUS * 2 * math.pi)
@@ -59,7 +57,6 @@ def go_straight_distance(distance):
 # 続けて前進
 def go_straight():
     pk = BothSteppingMotorPacket(rand())
-    pk.locked = False
     pk.direction = BothSteppingMotorPacket.ROTATE_RIGHT_FORWARD
     pk.type = BothSteppingMotorPacket.DATA_TYPE_3
     connection_manager.data_packet(pk)
@@ -68,8 +65,7 @@ def go_straight():
 # 停止
 def stop():
     pk = BothSteppingMotorPacket(rand())
-    pk.locked = False
-    pk.direction = BothSteppingMotorPacket.ROTATE_LEFT_RETURN
+    pk.direction = BothSteppingMotorPacket.ROTATE_LOCKED
     pk.type = BothSteppingMotorPacket.DATA_TYPE_4
     connection_manager.data_packet(pk)
 
@@ -104,6 +100,18 @@ def measure_line_tracer(method):
         time.sleep(1)  # 計測間隔
 
 
+# ライントレーサの値を計測し、実行結果をmethodに返す
+def measure_nine_axis(method):
+    global measuring_nine_axis
+    measuring_nine_axis = True
+    while measuring_nine_axis:
+        SensorManager() \
+            .set_packet(MeasureNineAxisSensorPacket(rand())) \
+            .send() \
+            .set_on_receive(lambda pk: method(pk))
+        time.sleep(1)  # 計測間隔
+
+
 def stop_measuring_distance():
     global measuring_distance
     measuring_distance = False
@@ -112,6 +120,11 @@ def stop_measuring_distance():
 def stop_measuring_line_tracer():
     global measuring_line_tracer
     measuring_line_tracer = False
+
+
+def stop_measuring_nine_axis():
+    global measuring_nine_axis
+    measuring_nine_axis = False
 
 
 # 1つの単浮動小数点数を8byteの配列に変換する

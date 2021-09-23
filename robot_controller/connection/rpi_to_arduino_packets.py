@@ -22,18 +22,18 @@ class RaspberryPiPacket:
         self.packet_id = self.UNKNOWN_PACKET_ID
         self.direction = self.ROTATE_RIGHT_FORWARD
         self.type = self.DATA_TYPE_1
-        self.data_1 = [0 for _ in range(self.DATA_SIZE)]
-        self.data_2 = [0 for _ in range(self.DATA_SIZE)]
+        self.data_1 = [0x00 for _ in range(self.DATA_SIZE)]
+        self.data_2 = [0x00 for _ in range(self.DATA_SIZE)]
         self.rand_id = _rand_id
 
     def encode(self):
         assert len(self.data_1) == self.DATA_SIZE
         assert len(self.data_2) == self.DATA_SIZE
 
-        self.data.extend([int(x) for x in str(self.packet_id)])
-        self.data.extend([int(x) for x in str(self.rand_id)])
-        self.data.append(self.direction)
-        self.data.append(self.type)
+        self.data.extend([bytes([int(x)])[0] for x in str(self.packet_id)])
+        self.data.extend([bytes([int(x)])[0] for x in str(self.rand_id)])
+        self.data.append(bytes([self.direction])[0])
+        self.data.append(bytes([self.type])[0])
         self.data.extend(self.data_1)
         self.data.extend(self.data_2)
 

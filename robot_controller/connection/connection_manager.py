@@ -12,7 +12,7 @@ from connection.packet_event_listener import PacketEventListener
 MOTOR_LEFT = 0  # 左モータ
 MOTOR_RIGHT = 1  # 右モータaa
 
-connection_interface = SerialInterface()  # 通信インターフェース（シリアルorネットワーク）
+connection_interface = NetworkInterface()  # 通信インターフェース（シリアルorネットワーク）
 event_listener = PacketEventListener()
 initialized = False  # Arduinoのシリアルポートが初期化されたかどうか
 sending_stopped = False  # Arduinoへのパケット送信が可能かどうか
@@ -40,7 +40,7 @@ def add_sensor_manager(rand_id, sensor_manager):
 # キューにパケットを追加する
 def data_packet(packet: RaspberryPiPacket):
     packet.encode()
-    packet_key_queue.append(packet.rand_id)
+    packet_key_queue.insert(0, packet.rand_id)
     packet_queue[packet.rand_id] = packet
 
 
@@ -57,13 +57,11 @@ def _send_packets():
 
 # パケットを送信する
 def _send_packet(pk):
-    raw = bytearray(pk.data)
-
     if core.debug:
-        print("\033[32m[SEND]\033[0m (" + str(len(raw)) + ") " + str(raw))
+        print("\033[32m[SEND]\033[0m (" + str(len(pk.data)) + ") " + str(pk.data))
         print("\033[33m[STATE] \033[0m" + str(core.instance.state))
 
-    connection_interface.send_data(raw)
+    connection_interface.send_data(pk.data)
 
 
 # パケット受信待機
@@ -74,50 +72,54 @@ def _await_packets():
             continue
 
         raw = connection_interface.read_data()
-        raw_str = str(raw).replace("\\t", "\\x09")
+        raw_hex = raw.hex()
 
         if core.debug:
-            print("\033[34m[RECEIVE]\033[0m (" + str(len(raw)) + ") " + raw_str)
+            print("\033[34m[RECEIVE]\033[0m (" + str(len(raw)) + ") " + raw_hex)
 
         # 通信開始
-        if (not initialized) and "Transmission Start" in raw_str:
+        if (not initialized) and bytearray("Transmission Start", encoding='utf8').hex() in raw_hex:
             initialized = True
             event_listener.on_connection_start()
             continue
 
         # データサイズエラー
-        if "Invalid data size" in raw_str:
+        if "Invalid data size" in raw_hex:
             print("\033[31m[ERROR] \033[0mInvalid Data Size Error")
             continue
 
         # 受信データを\r\nで区切って処理
-        split = raw_str[2:len(raw_str) - 1].split("\\r\\n")
+        split = str(raw_hex).split("0d0a")
         global sending_stopped
 
-        pk_data = []
         for text in split:
+            array = bytearray.fromhex(text)
+            string = ""
+
+            try:
+                string = array.decode(encoding='utf8')
+            except UnicodeDecodeError:
+                pass
+
             # パケット送信停止命令
-            if text == "Stop":
+            if string == "Stop":
                 sending_stopped = True
                 continue
 
             # 受信信号（rand_id）
-            elif text.isdecimal() and len(text) == 4:
+            elif string.isdecimal() and len(string) == 4:
                 sending_stopped = False  # パケット送信停止解除
-                del packet_queue[int(text)]
+                del packet_queue[int(string)]
                 continue
 
             # Arduino to Raspberry Pi Packet
             # TODO RaspberryPiPacket to ArduinoPacket
-            elif len(text) >= ArduinoPacket.PACKET_LENGTH:
-                split_text = text[1:].split("\\")
-                ids = []
+            elif len(array) > ArduinoPacket.PACKET_LENGTH:
+                byte_ids = array[ArduinoPacket.PACKET_LENGTH:]
+                ids = [0, 0, 0, 0]
                 i = 0
-                for x in split_text:
-                    if i <= ArduinoPacket.PACKET_LENGTH:
-                        pk_data.append(x[2:3])
-                    else:
-                        ids.append(x[2:3])
+                for b in byte_ids:
+                    ids[i] = str(int(b))
                     i = i + 1
 
                 # キューからパケットを削除
@@ -125,11 +127,14 @@ def _await_packets():
                     sending_stopped = False  # パケット送信停止解除
                     del packet_queue[int("".join(ids))]
 
-                _process_packet(pk_data)
+                _process_packet(array[0:ArduinoPacket.PACKET_LENGTH - 1])
+
+            elif len(array) == ArduinoPacket.PACKET_LENGTH:
+                _process_packet(array)
 
             # 予期しないパケットのとき
             else:
-                # print("\033[31m[ERROR] \033[0mInvalid Packet Error (" + text + ")")
+                print("\033[31m[ERROR] \033[0mUnexpected Packet Error (" + string + ")")
                 continue
 
 
