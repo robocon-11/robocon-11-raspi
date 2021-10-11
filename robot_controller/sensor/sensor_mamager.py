@@ -1,4 +1,4 @@
-from connection.arduino_to_rpi_packets import ArduinoPacket
+from connection.input_packets import InputPacket
 from connection import connection_manager
 
 
@@ -8,7 +8,7 @@ class SensorManager:
         self.__on_receive__ = None
         self.packet = None
 
-    def on_receive(self, packet: ArduinoPacket):
+    def on_receive(self, packet: InputPacket):
         self.__on_receive__(packet)
 
     def send(self):

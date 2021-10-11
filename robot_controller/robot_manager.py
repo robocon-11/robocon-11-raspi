@@ -3,7 +3,7 @@ import struct
 import threading
 import time
 from connection import connection_manager
-from connection.rpi_to_arduino_packets import *
+from connection.output_packets import *
 from sensor.sensor_mamager import SensorManager
 
 
@@ -26,7 +26,7 @@ def rotate_right():
     connection_manager.data_packet(pk_r)
 
     pk_l = LeftSteppingMotorPacket(rand())
-    pk_l.direction = RaspberryPiPacket.ROTATE_LEFT_RETURN
+    pk_l.direction = OutputPacket.ROTATE_LEFT_RETURN
     pk_l.type = RightSteppingMotorPacket.DATA_TYPE_3
     # pk_l.data_1 = create_filled_data1(ROTATION_DEGREE)
     connection_manager.data_packet(pk_l)
@@ -39,7 +39,7 @@ def rotate_left():
     connection_manager.data_packet(pk_l)
 
     pk_r = RightSteppingMotorPacket(rand())
-    pk_r.direction = RaspberryPiPacket.ROTATE_LEFT_RETURN
+    pk_r.direction = OutputPacket.ROTATE_LEFT_RETURN
     pk_r.data_1 = create_filled_data1(ROTATION_DEGREE)
     connection_manager.data_packet(pk_l)
 

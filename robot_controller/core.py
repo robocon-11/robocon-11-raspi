@@ -1,9 +1,10 @@
 import robot_manager
 import threading
 import time
+import led_indicator
 from sensor.sensor_mamager import SensorManager
-from connection.arduino_to_rpi_packets import *
-from connection.rpi_to_arduino_packets import *
+from connection.input_packets import *
+from connection.output_packets import *
 
 
 debug = True  # デバッグモード
@@ -41,9 +42,9 @@ class Core:
 
     lost_ball = False  # ボールを保持しているかどうか
     state = STATE_READY  # 処理段階
-    last_line_traced_at = 0
+    last_line_traced_at = 0  # 最後にライン上であることを検出した時間（エポック秒）
 
-    # Arduinoとの接続が完了したとき
+    # 外部インタフェースとの接続が完了したとき
     def on_connection_start(self):
         print("Process Started.")
         SensorManager() \
@@ -51,7 +52,7 @@ class Core:
             .send() \
             .set_on_receive(lambda pk: self.on_nine_axis_sensor_resulted(pk))
 
-    # 9軸センサの計測が完了したとき
+    # 9軸センサの計測が完了したときに発火
     def on_nine_axis_sensor_resulted(self, pk: NineAxisSensorResultPacket):
         if debug:
             print("\033[35m[DEBUG] GeoMagnetism: \033[0m" + str(pk.geomagnetism))
@@ -96,7 +97,7 @@ class Core:
                 robot_manager.go_straight()
                 robot_manager.measure(robot_manager.measure_line_tracer, self.on_line_tracer_resulted)
 
-    # ライントレーサの計測が完了したとき
+    # ライントレーサの計測が完了したときに発火
     def on_line_tracer_resulted(self, pk: LineTracerResultPacket):
         if debug:
             print("\033[35m[DEBUG] LineTracer: \033[0m" + str(pk.is_on_line))
@@ -130,7 +131,7 @@ class Core:
             self.state = self.STATE_PHASE_1_EXCEEDED_SB_LINE
             robot_manager.measure(robot_manager.measure_distance, self.on_distance_sensor_resulted)
 
-    # 距離センサの計測が完了したとき
+    # 距離センサの計測が完了したときに発火
     def on_distance_sensor_resulted(self, pk: DistanceSensorResultPacket):
         if debug:
             print("\033[35m[DEBUG] Distance: \033[0m" + str(pk.distance))
@@ -167,6 +168,7 @@ class Core:
         thread = threading.Thread(target=self._do_managing_state)
         thread.start()
 
+    # stateを取得し、標準出力に出力する
     def _do_managing_state(self):
         while running:
             print("\033[33m[STATE] \033[0m" + str(self.state))
@@ -176,6 +178,9 @@ class Core:
 instance = Core()
 
 if __name__ == "__main__":
+    # LEDインジケータ
+    led_indicator.init()
+    led_indicator.red_led_on()
 
     # シリアル通信モジュールの初期化
     robot_manager.connection_manager.init()

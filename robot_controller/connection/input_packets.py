@@ -2,7 +2,7 @@ import struct
 
 
 # Raspberry Pi->Arduinoのパケット
-class ArduinoPacket:
+class InputPacket:
     PACKET_LENGTH = 42  # 全パケット長
     DATA_LENGTH = 36  # データ長
 
@@ -45,49 +45,49 @@ def array_to_float(array):
     return struct.unpack('>f', bytes(array))[0]
 
 
-class RightSteppingMotorAlertPacket(ArduinoPacket):
+class RightSteppingMotorAlertPacket(InputPacket):
     ID = 10
 
     def __init__(self, data):
         super(RightSteppingMotorAlertPacket, self).__init__(data)
 
 
-class RightSteppingMotorFeedbackPacket(ArduinoPacket):
+class RightSteppingMotorFeedbackPacket(InputPacket):
     ID = 11
 
     def __init__(self, data):
         super(RightSteppingMotorFeedbackPacket, self).__init__(data)
 
 
-class LeftSteppingMotorAlertPacket(ArduinoPacket):
+class LeftSteppingMotorAlertPacket(InputPacket):
     ID = 20
 
     def __init__(self, data):
         super(LeftSteppingMotorAlertPacket, self).__init__(data)
 
 
-class LeftSteppingMotorFeedbackPacket(ArduinoPacket):
+class LeftSteppingMotorFeedbackPacket(InputPacket):
     ID = 21
 
     def __init__(self, data):
         super(LeftSteppingMotorFeedbackPacket, self).__init__(data)
 
 
-class BothSteppingMotorAlertPacket(ArduinoPacket):
+class BothSteppingMotorAlertPacket(InputPacket):
     ID = 30
 
     def __init__(self, data):
         super(BothSteppingMotorAlertPacket, self).__init__(data)
 
 
-class BothSteppingMotorFeedbackPacket(ArduinoPacket):
+class BothSteppingMotorFeedbackPacket(InputPacket):
     ID = 31
 
     def __init__(self, data):
         super(BothSteppingMotorFeedbackPacket, self).__init__(data)
 
 
-class DistanceSensorResultPacket(ArduinoPacket):
+class DistanceSensorResultPacket(InputPacket):
     ID = 40
     distance = 0.0  # 対面する壁からの距離(mm)
 
@@ -98,7 +98,7 @@ class DistanceSensorResultPacket(ArduinoPacket):
         self.distance = array_to_float(self.payload[0])
 
 
-class LineTracerResultPacket(ArduinoPacket):
+class LineTracerResultPacket(InputPacket):
     ID = 50
     is_on_line = False  # ライン上かどうか
 
@@ -112,21 +112,21 @@ class LineTracerResultPacket(ArduinoPacket):
         pass  # TODO
 
 
-class UpperServoMotorFeedbackPacket(ArduinoPacket):
+class UpperServoMotorFeedbackPacket(InputPacket):
     ID = 60
 
     def __init__(self, data):
         super(UpperServoMotorFeedbackPacket, self).__init__(data)
 
 
-class BottomServoMotorFeedbackPacket(ArduinoPacket):
+class BottomServoMotorFeedbackPacket(InputPacket):
     ID = 70
 
     def __init__(self, data):
         super(BottomServoMotorFeedbackPacket, self).__init__(data)
 
 
-class NineAxisSensorResultPacket(ArduinoPacket):
+class NineAxisSensorResultPacket(InputPacket):
     ID = 80
     geomagnetism = 0.0  # 地磁気
 

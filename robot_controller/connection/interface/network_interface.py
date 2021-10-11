@@ -1,6 +1,6 @@
 from socket import *
 from connection.interface.connection_interface import ConnectionInterface
-from connection.arduino_to_rpi_packets import ArduinoPacket
+from connection.input_packets import InputPacket
 
 
 class NetworkInterface(ConnectionInterface):
@@ -24,7 +24,7 @@ class NetworkInterface(ConnectionInterface):
         self.socket.sendto(bytes(data), self.dest_address)
 
     def read_data(self):
-        data, address = self.socket.recvfrom(ArduinoPacket.PACKET_LENGTH)
+        data, address = self.socket.recvfrom(InputPacket.PACKET_LENGTH)
         return data
 
     def is_waiting(self):
