@@ -1,4 +1,4 @@
-from connection.rpi_to_arduino_packets import *
+from connection.output_packets import *
 
 
 class ConnectionInterface:

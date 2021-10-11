@@ -1,5 +1,5 @@
 # Raspberry Pi->Arduinoのパケット
-class RaspberryPiPacket:
+class OutputPacket:
     ROTATE_RIGHT_FORWARD = 0  # 右回転or前進
     ROTATE_LEFT_RETURN = 1  # 左回転or後進
     ROTATE_LOCKED = 2  # ロック
@@ -38,7 +38,7 @@ class RaspberryPiPacket:
         self.data.extend(self.data_2)
 
 
-class RightSteppingMotorPacket(RaspberryPiPacket):
+class RightSteppingMotorPacket(OutputPacket):
     ID = 10
 
     def __init__(self, _rand_id):
@@ -46,7 +46,7 @@ class RightSteppingMotorPacket(RaspberryPiPacket):
         self.packet_id = self.ID
 
 
-class LeftSteppingMotorPacket(RaspberryPiPacket):
+class LeftSteppingMotorPacket(OutputPacket):
     ID = 20
 
     def __init__(self, _rand_id):
@@ -54,7 +54,7 @@ class LeftSteppingMotorPacket(RaspberryPiPacket):
         self.packet_id = self.ID
 
 
-class BothSteppingMotorPacket(RaspberryPiPacket):
+class BothSteppingMotorPacket(OutputPacket):
     ID = 30
 
     def __init__(self, _rand_id):
@@ -62,7 +62,7 @@ class BothSteppingMotorPacket(RaspberryPiPacket):
         self.packet_id = self.ID
 
 
-class MeasureDistanceToBallPacket(RaspberryPiPacket):
+class MeasureDistanceToBallPacket(OutputPacket):
     ID = 40
 
     def __init__(self, _rand_id):
@@ -70,7 +70,7 @@ class MeasureDistanceToBallPacket(RaspberryPiPacket):
         self.packet_id = self.ID
 
 
-class MeasureLineTracerPacket(RaspberryPiPacket):
+class MeasureLineTracerPacket(OutputPacket):
     ID = 50
 
     def __init__(self, _rand_id):
@@ -78,7 +78,7 @@ class MeasureLineTracerPacket(RaspberryPiPacket):
         self.packet_id = self.ID
 
 
-class UpperServoMotorPacket(RaspberryPiPacket):
+class UpperServoMotorPacket(OutputPacket):
     ID = 60
 
     def __init__(self, _rand_id):
@@ -86,7 +86,7 @@ class UpperServoMotorPacket(RaspberryPiPacket):
         self.packet_id = self.ID
 
 
-class BottomServoMotorPacket(RaspberryPiPacket):
+class BottomServoMotorPacket(OutputPacket):
     ID = 70
 
     def __init__(self, _rand_id):
@@ -94,7 +94,7 @@ class BottomServoMotorPacket(RaspberryPiPacket):
         self.packet_id = self.ID
 
 
-class MeasureNineAxisSensorPacket(RaspberryPiPacket):
+class MeasureNineAxisSensorPacket(OutputPacket):
     ID = 80
 
     def __init__(self, _rand_id):

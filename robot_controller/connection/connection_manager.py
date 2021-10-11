@@ -2,17 +2,16 @@ import serial
 import threading
 import core
 import time
+import led_indicator
 from connection.interface.connection_interface import ConnectionInterface
 from connection.interface.serial_interface import SerialInterface
 from connection.interface.network_interface import NetworkInterface
-from connection.rpi_to_arduino_packets import RaspberryPiPacket
-from connection.arduino_to_rpi_packets import *
+from connection.output_packets import OutputPacket
+from connection.input_packets import *
 from connection.packet_event_listener import PacketEventListener
 
-MOTOR_LEFT = 0  # 左モータ
-MOTOR_RIGHT = 1  # 右モータaa
 
-connection_interface = NetworkInterface()  # 通信インターフェース（シリアルorネットワーク）
+connection_interface: ConnectionInterface = NetworkInterface()  # 通信インターフェース（シリアルorネットワーク）
 event_listener = PacketEventListener()
 initialized = False  # Arduinoのシリアルポートが初期化されたかどうか
 sending_stopped = False  # Arduinoへのパケット送信が可能かどうか
@@ -38,7 +37,7 @@ def add_sensor_manager(rand_id, sensor_manager):
 
 
 # キューにパケットを追加する
-def data_packet(packet: RaspberryPiPacket):
+def data_packet(packet: OutputPacket):
     packet.encode()
     packet_key_queue.insert(0, packet.rand_id)
     packet_queue[packet.rand_id] = packet
@@ -61,6 +60,7 @@ def _send_packet(pk):
         print("\033[32m[SEND]\033[0m (" + str(len(pk.data)) + ") " + str(pk.data))
         print("\033[33m[STATE] \033[0m" + str(core.instance.state))
 
+    led_indicator.green_led_on()
     connection_interface.send_data(pk.data)
 
 
@@ -70,6 +70,8 @@ def _await_packets():
     while core.running:
         if connection_interface.is_waiting():
             continue
+
+        led_indicator.blue_led_on()
 
         raw = connection_interface.read_data()
         raw_hex = raw.hex()
@@ -114,8 +116,8 @@ def _await_packets():
 
             # Arduino to Raspberry Pi Packet
             # TODO RaspberryPiPacket to ArduinoPacket
-            elif len(array) > ArduinoPacket.PACKET_LENGTH:
-                byte_ids = array[ArduinoPacket.PACKET_LENGTH:]
+            elif len(array) > InputPacket.PACKET_LENGTH:
+                byte_ids = array[InputPacket.PACKET_LENGTH:]
                 ids = [0, 0, 0, 0]
                 i = 0
                 for b in byte_ids:
@@ -127,9 +129,9 @@ def _await_packets():
                     sending_stopped = False  # パケット送信停止解除
                     del packet_queue[int("".join(ids))]
 
-                _process_packet(array[0:ArduinoPacket.PACKET_LENGTH - 1])
+                _process_packet(array[0:InputPacket.PACKET_LENGTH - 1])
 
-            elif len(array) == ArduinoPacket.PACKET_LENGTH:
+            elif len(array) == InputPacket.PACKET_LENGTH:
                 _process_packet(array)
 
             # 予期しないパケットのとき
@@ -141,7 +143,7 @@ def _await_packets():
 # 受信パケットの処理
 def _process_packet(pk_data):
     try:
-        packet = ArduinoPacket(pk_data)
+        packet = InputPacket(pk_data)
         packet.decode()
 
         if packet.packet_id == RightSteppingMotorAlertPacket.ID:
