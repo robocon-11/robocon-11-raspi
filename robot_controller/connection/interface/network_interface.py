@@ -1,3 +1,4 @@
+import logger
 from socket import *
 from connection.interface.connection_interface import ConnectionInterface
 from connection.input_packets import InputPacket
@@ -15,7 +16,7 @@ class NetworkInterface(ConnectionInterface):
         self.dest_address = (self.dest_ip, self.dest_port)
 
     def init(self):
-        print("Using Network Interface")
+        logger.info("Using Network Interface")
 
         self.socket = socket(AF_INET, SOCK_DGRAM)
         self.socket.bind(self.sender_address)

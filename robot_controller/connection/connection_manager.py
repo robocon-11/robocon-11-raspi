@@ -2,7 +2,8 @@ import serial
 import threading
 import core
 import time
-import led_indicator
+import logger
+import controller_board_manager
 from connection.interface.connection_interface import ConnectionInterface
 from connection.interface.serial_interface import SerialInterface
 from connection.interface.network_interface import NetworkInterface
@@ -19,19 +20,21 @@ packet_key_queue = []  # パケット（rand_id）のキュー
 packet_queue = {}  # パケットのキュー
 
 
+# 初期化
 def init():
-    print("Initializing connection interface...")
+    logger.info("Initializing connection interface...")
     connection_interface.init()
 
-    print("Starting packet receiver...")
+    logger.info("Starting packet receiver...")
     th = threading.Thread(target=_await_packets)
     th.start()
 
-    print("Starting packet sender...")
+    logger.info("Starting packet sender...")
     th1 = threading.Thread(target=_send_packets)
     th1.start()
 
 
+# SensorManagerを保持
 def add_sensor_manager(rand_id, sensor_manager):
     event_listener.add_manager(rand_id, sensor_manager)
 
@@ -54,13 +57,13 @@ def _send_packets():
         time.sleep(0.01)  # 10ms待つ
 
 
-# パケットを送信する
+# パケットを送信
 def _send_packet(pk):
     if core.debug:
-        print("\033[32m[SEND]\033[0m (" + str(len(pk.data)) + ") " + str(pk.data))
-        print("\033[33m[STATE] \033[0m" + str(core.instance.state))
+        logger.send("(" + str(len(pk.data)) + ") " + str(pk.data))
+        logger.state(str(core.instance.state))
 
-    led_indicator.green_led_on()
+    controller_board_manager.green_led_on()
     connection_interface.send_data(pk.data)
 
 
@@ -71,13 +74,13 @@ def _await_packets():
         if connection_interface.is_waiting():
             continue
 
-        led_indicator.blue_led_on()
+        controller_board_manager.blue_led_on()
 
         raw = connection_interface.read_data()
         raw_hex = raw.hex()
 
         if core.debug:
-            print("\033[34m[RECEIVE]\033[0m (" + str(len(raw)) + ") " + raw_hex)
+            logger.receive("(" + str(len(raw)) + ") " + raw_hex)
 
         # 通信開始
         if (not initialized) and bytearray("Transmission Start", encoding='utf8').hex() in raw_hex:
@@ -87,7 +90,7 @@ def _await_packets():
 
         # データサイズエラー
         if "Invalid data size" in raw_hex:
-            print("\033[31m[ERROR] \033[0mInvalid Data Size Error")
+            logger.error("Invalid Data Size Error")
             continue
 
         # 受信データを\r\nで区切って処理
@@ -136,7 +139,7 @@ def _await_packets():
 
             # 予期しないパケットのとき
             else:
-                print("\033[31m[ERROR] \033[0mUnexpected Packet Error (" + string + ")")
+                logger.error("Unexpected Packet Error (" + string + ")")
                 continue
 
 
@@ -192,7 +195,7 @@ def _process_packet(pk_data):
             event_listener.on_bottom_servo_motor_feedback(pk)
 
     except AssertionError as e:
-        print(e)
+        logger.error(e)
         return
 
 
