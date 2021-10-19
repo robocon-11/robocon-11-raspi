@@ -21,6 +21,8 @@ cam.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)  # カメラ画像の縦幅を720に設�
 queue = []
 while True:
     ret, frame = cam.read()
+    if frame is None:
+        continue
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     circles = cv2.HoughCircles(gray, cv2.HOUGH_GRADIENT, dp=1, minDist=20, param1=100, param2=60, minRadius=0, maxRadius=0)
 
