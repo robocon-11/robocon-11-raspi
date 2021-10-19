@@ -12,7 +12,7 @@ def make_sharp_kernel(k: int):
 
 
 # Test for Raspberry Pi Camera
-cam = cv2.VideoCapture(0, cv2.CAP_MSMF)
+cam = cv2.VideoCapture(1, cv2.CAP_MSMF)
 cam.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'))
 cam.set(cv2.CAP_PROP_FPS, 60)            # カメラFPSを60FPSに設定
 cam.set(cv2.CAP_PROP_FRAME_WIDTH, 600)   # カメラ画像の横幅を1280に設定
@@ -21,8 +21,6 @@ cam.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)  # カメラ画像の縦幅を720に設�
 queue = []
 while True:
     ret, frame = cam.read()
-    if frame is None:
-        continue
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     circles = cv2.HoughCircles(gray, cv2.HOUGH_GRADIENT, dp=1, minDist=20, param1=100, param2=60, minRadius=0, maxRadius=0)
 
