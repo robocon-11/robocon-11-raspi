@@ -1,14 +1,15 @@
 import robot_manager
 import threading
 import time
-import led_indicator
+import controller_board_manager
+import logger
 from sensor.sensor_mamager import SensorManager
 from connection.input_packets import *
 from connection.output_packets import *
 
 
 debug = True  # デバッグモード
-running = True  # 実行中かどうか
+running = False  # 実行中かどうか
 
 
 class Core:
@@ -46,7 +47,7 @@ class Core:
 
     # 外部インタフェースとの接続が完了したとき
     def on_connection_start(self):
-        print("Process Started.")
+        logger.info("Successfully connected.")
         SensorManager() \
             .set_packet(MeasureNineAxisSensorPacket(robot_manager.rand())) \
             .send() \
@@ -55,7 +56,7 @@ class Core:
     # 9軸センサの計測が完了したときに発火
     def on_nine_axis_sensor_resulted(self, pk: NineAxisSensorResultPacket):
         if debug:
-            print("\033[35m[DEBUG] GeoMagnetism: \033[0m" + str(pk.geomagnetism))
+            logger.debug("GeoMagnetism: " + str(pk.geomagnetism))
 
         if self.state == self.STATE_READY:
             self.state = self.STATE_STAND_BY
@@ -89,7 +90,7 @@ class Core:
                 robot_manager.measure(robot_manager.measure_distance, self.on_distance_sensor_resulted)
 
         elif self.state == self.STATE_PHASE_1_TURNED_CORNER_3:
-            print(robot_manager.direction - pk.geomagnetism)
+            logger.debug(robot_manager.direction - pk.geomagnetism)
             if abs(360 - abs(robot_manager.direction - pk.geomagnetism)) < 2:
                 self.state = self.STATE_PHASE_1_TURNED_CORNER_4
                 robot_manager.stop_measuring_nine_axis()
@@ -100,7 +101,7 @@ class Core:
     # ライントレーサの計測が完了したときに発火
     def on_line_tracer_resulted(self, pk: LineTracerResultPacket):
         if debug:
-            print("\033[35m[DEBUG] LineTracer: \033[0m" + str(pk.is_on_line))
+            logger.debug("LineTracer: " + str(pk.is_on_line))
 
         # ライン上にあることが連続で検知されないよう2秒以内に連続で来た場合にははじく
         if not pk.is_on_line or (int(time.time()) - self.last_line_traced_at < 2):
@@ -134,7 +135,7 @@ class Core:
     # 距離センサの計測が完了したときに発火
     def on_distance_sensor_resulted(self, pk: DistanceSensorResultPacket):
         if debug:
-            print("\033[35m[DEBUG] Distance: \033[0m" + str(pk.distance))
+            logger.debug("Distance: " + str(pk.distance))
         if self.state == self.STATE_PHASE_1_EXCEEDED_HALF_LINE_1:
             if pk.distance < 1000:
                 robot_manager.stop_measuring_distance()
@@ -171,16 +172,20 @@ class Core:
     # stateを取得し、標準出力に出力する
     def _do_managing_state(self):
         while running:
-            print("\033[33m[STATE] \033[0m" + str(self.state))
+            logger.state(str(self.state))
             time.sleep(1)
+        logger.critical("Stopped program by the controller.")
+        exit(0)
 
 
-instance = Core()
+instance: Core
+# instance = Core()
 
 if __name__ == "__main__":
     # LEDインジケータ
-    led_indicator.init()
-    led_indicator.red_led_on()
+    controller_board_manager.init()  # 開始ボタンが押されるまでここでブロッキングされる
+    controller_board_manager.yellow_led_on()
+    controller_board_manager.red_led_off()
 
     # シリアル通信モジュールの初期化
     robot_manager.connection_manager.init()

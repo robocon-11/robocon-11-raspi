@@ -16,7 +16,7 @@ cam = cv2.VideoCapture(0)
 queue = []
 while True:
     ret, frame = cam.read()
-    gray = cv2.medianBlur(cv2.filter2D(cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY), -1, make_sharp_kernel(1)), ksize=5)
+    gray = cv2.filter2D(cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY), -1, make_sharp_kernel(1))
     circles = cv2.HoughCircles(gray, cv2.HOUGH_GRADIENT, dp=1, minDist=20, param1=100, param2=60, minRadius=0, maxRadius=0)
 
     if circles is not None and len(circles) > 0:

@@ -21,12 +21,12 @@ measuring_nine_axis = False  # 9軸センサで計測中かどうか
 # 右に90度回転
 def rotate_right():
     pk_r = RightSteppingMotorPacket(rand())
-    pk_r.direction = RightSteppingMotorPacket.ROTATE_LOCKED
+    pk_r.direction = RightSteppingMotorPacket.ROTATION_LOCKED
     pk_r.type = RightSteppingMotorPacket.DATA_TYPE_3
     connection_manager.data_packet(pk_r)
 
     pk_l = LeftSteppingMotorPacket(rand())
-    pk_l.direction = OutputPacket.ROTATE_LEFT_RETURN
+    pk_l.direction = OutputPacket.ROTATION_LEFT
     pk_l.type = RightSteppingMotorPacket.DATA_TYPE_3
     # pk_l.data_1 = create_filled_data1(ROTATION_DEGREE)
     connection_manager.data_packet(pk_l)
@@ -35,11 +35,11 @@ def rotate_right():
 # 左に90度回転
 def rotate_left():
     pk_l = LeftSteppingMotorPacket(rand())
-    pk_l.direction = LeftSteppingMotorPacket.ROTATE_LOCKED
+    pk_l.direction = LeftSteppingMotorPacket.ROTATION_LOCKED
     connection_manager.data_packet(pk_l)
 
     pk_r = RightSteppingMotorPacket(rand())
-    pk_r.direction = OutputPacket.ROTATE_LEFT_RETURN
+    pk_r.direction = OutputPacket.ROTATION_LEFT
     pk_r.data_1 = create_filled_data1(ROTATION_DEGREE)
     connection_manager.data_packet(pk_l)
 
@@ -48,7 +48,7 @@ def rotate_left():
 # @arg distance(mm)
 def go_straight_distance(distance):
     pk = BothSteppingMotorPacket(rand())
-    pk.direction = BothSteppingMotorPacket.ROTATE_RIGHT_FORWARD
+    pk.direction = BothSteppingMotorPacket.ROTATION_RIGHT
     pk.type = BothSteppingMotorPacket.DATA_TYPE_1
     # TODO 角速度と総角度 360 * distance / (TIRE_RADIUS * 2 * math.pi)
     connection_manager.data_packet(pk)
@@ -57,7 +57,7 @@ def go_straight_distance(distance):
 # 続けて前進
 def go_straight():
     pk = BothSteppingMotorPacket(rand())
-    pk.direction = BothSteppingMotorPacket.ROTATE_RIGHT_FORWARD
+    pk.direction = BothSteppingMotorPacket.ROTATION_RIGHT
     pk.type = BothSteppingMotorPacket.DATA_TYPE_3
     connection_manager.data_packet(pk)
 
@@ -65,7 +65,7 @@ def go_straight():
 # 停止
 def stop():
     pk = BothSteppingMotorPacket(rand())
-    pk.direction = BothSteppingMotorPacket.ROTATE_LOCKED
+    pk.direction = BothSteppingMotorPacket.ROTATION_LOCKED
     pk.type = BothSteppingMotorPacket.DATA_TYPE_4
     connection_manager.data_packet(pk)
 
@@ -82,7 +82,7 @@ def measure_distance(method):
     measuring_distance = True
     while measuring_distance:
         SensorManager() \
-            .set_packet(MeasureDistanceToBallPacket(rand())) \
+            .set_packet(MeasureDistancePacket(rand())) \
             .send() \
             .set_on_receive(lambda pk: method(pk))
         time.sleep(1)  # 計測間隔
