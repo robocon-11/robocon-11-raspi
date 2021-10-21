@@ -12,7 +12,8 @@ def make_sharp_kernel(k: int):
 
 
 # Test for Raspberry Pi Camera
-cam = cv2.VideoCapture(0, cv2.CAP_MSMF)
+# cam = cv2.VideoCapture(0, cv2.CAP_MSMF)
+cam = cv2.VideoCapture(0)
 cam.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'))
 cam.set(cv2.CAP_PROP_FPS, 20)            # カメラFPSを60FPSに設定
 cam.set(cv2.CAP_PROP_FRAME_WIDTH, 200)   # カメラ画像の横幅を1280に設定
