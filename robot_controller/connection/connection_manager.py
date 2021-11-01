@@ -62,7 +62,7 @@ def _send_packet(interface, pk):
     if core.debug:
         logger.send("(" + interface.get_name() + " / " + str(len(pk.data)) + ") " + str(pk.data))
     logger.state(str(core.instance.state))
-    logger.debug("send: " + pk.rand_id)
+    logger.debug("send: " + str(pk.rand_id))
 
     controller_board_manager.green_led_on()
     interface.send_data(pk.data)
