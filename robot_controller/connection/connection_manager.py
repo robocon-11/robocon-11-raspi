@@ -62,6 +62,7 @@ def _send_packet(interface, pk):
     if core.debug:
         logger.send("(" + interface.get_name() + " / " + str(len(pk.data)) + ") " + str(pk.data))
     logger.state(str(core.instance.state))
+    logger.debug("send: " + pk.rand_id)
 
     controller_board_manager.green_led_on()
     interface.send_data(pk.data)
@@ -114,8 +115,9 @@ def _await_packets(interface):
                 continue
 
             # 受信信号（rand_id）
-            elif string.isdecimal() and len(string) == 4:
+            elif len(array) == 4:
                 interface.sending_stopped = False  # パケット送信停止解除
+                logger.debug("receive: " + str(int.from_bytes(array, byteorder='little')))
                 del interface.packet_queue[int(string)]
                 continue
 
