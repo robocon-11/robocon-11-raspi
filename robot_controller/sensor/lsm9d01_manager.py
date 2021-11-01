@@ -67,8 +67,9 @@ class LSM9D01:
             time.sleep(1)
 
     def __init__(self):
-        th = threading.Thread(target=self._load)
-        th.start()
+        # th = threading.Thread(target=self._load)
+        # th.start()
+        pass
 
 
-LSM9D01 = LSM9D01()
+# LSM9D01 = LSM9D01()

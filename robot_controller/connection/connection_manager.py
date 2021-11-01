@@ -11,7 +11,7 @@ from connection.output_packets import OutputPacket
 from connection.packet_event_listener import PacketEventListener
 
 # 通信インターフェース
-connection_interfaces: list = [SerialInterface(), UDPInterface(), InternalInterface()]
+connection_interfaces: list = [SerialInterface()]
 
 # パケット用イベントリスナ
 event_listener = PacketEventListener()
@@ -76,6 +76,9 @@ def _await_packets(interface):
         controller_board_manager.blue_led_on()
 
         raw = interface.read_data()
+        if raw is None:
+            continue
+
         raw_hex = raw.hex()
 
         if core.debug:
