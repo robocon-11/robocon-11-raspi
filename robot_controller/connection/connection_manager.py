@@ -100,7 +100,6 @@ def _await_packets(interface):
 
         for text in split:
             array = bytearray.fromhex(text)
-            print(text)
             string = ""
 
             try:

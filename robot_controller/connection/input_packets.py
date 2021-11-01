@@ -31,8 +31,8 @@ class InputPacket:
     def decode(self):
         assert len(self.data) == self.PACKET_LENGTH
 
-        self.packet_id = int.from_bytes(self.data[0:2], byteorder='big')
-        self.rand_id = int.from_bytes(self.data[2:6], byteorder='big')
+        self.packet_id = int.from_bytes(self.data[0:2], byteorder='little')
+        self.rand_id = int.from_bytes(self.data[2:6], byteorder='little')
 
         for i in range(0, 9):
             index = i * 4 + 6
