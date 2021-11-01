@@ -1,33 +1,32 @@
-import serial
 import threading
-import core
 import time
-import logger
 import controller_board_manager
-from connection.interface.connection_interface import ConnectionInterface
-from connection.interface.serial_interface import SerialInterface
-from connection.interface.network_interface import NetworkInterface
-from connection.output_packets import OutputPacket
+import core
+import logger
 from connection.input_packets import *
+from connection.interface.serial_interface import SerialInterface
+from connection.interface.udp_interface import UDPInterface
+from connection.interface.internal_interface import InternalInterface
+from connection.output_packets import OutputPacket
 from connection.packet_event_listener import PacketEventListener
 
+# 通信インターフェース
+connection_interfaces: list = [SerialInterface(), UDPInterface(), InternalInterface()]
 
-connection_interface: ConnectionInterface = NetworkInterface()  # 通信インターフェース（シリアルorネットワーク）
+# パケット用イベントリスナ
 event_listener = PacketEventListener()
-initialized = False  # Arduinoのシリアルポートが初期化されたかどうか
-sending_stopped = False  # Arduinoへのパケット送信が可能かどうか
-packet_key_queue = []  # パケット（rand_id）のキュー
-packet_queue = {}  # パケットのキュー
 
 
 # 初期化
 def init():
     logger.info("Initializing connection interface...")
-    connection_interface.init()
+    for interface in connection_interfaces:
+        interface.init()
 
     logger.info("Starting packet receiver...")
-    th = threading.Thread(target=_await_packets)
-    th.start()
+    for interface in connection_interfaces:
+        th = threading.Thread(target=_await_packets, args=(interface,))
+        th.start()
 
     logger.info("Starting packet sender...")
     th1 = threading.Thread(target=_send_packets)
@@ -42,60 +41,59 @@ def add_sensor_manager(rand_id, sensor_manager):
 # キューにパケットを追加する
 def data_packet(packet: OutputPacket):
     packet.encode()
-    packet_key_queue.insert(0, packet.rand_id)
-    packet_queue[packet.rand_id] = packet
+    for interface in connection_interfaces:
+        interface.packet_key_queue.insert(0, packet.rand_id)
+        interface.packet_queue[packet.rand_id] = packet
 
 
 # パケット送信のキューイング
 def _send_packets():
     while core.running:
-        if not sending_stopped and not len(packet_key_queue) == 0:
-            rand_id = packet_key_queue.pop()
-            pk = packet_queue[rand_id]
-            _send_packet(pk)
-
-        time.sleep(0.01)  # 10ms待つ
+        for interface in connection_interfaces:
+            if not interface.sending_stopped and not len(interface.packet_key_queue) == 0:
+                rand_id = interface.packet_key_queue.pop()
+                pk = interface.packet_queue[rand_id]
+                _send_packet(interface, pk)
+                time.sleep(0.01)  # 10ms待つ
 
 
 # パケットを送信
-def _send_packet(pk):
+def _send_packet(interface, pk):
     if core.debug:
-        logger.send("(" + str(len(pk.data)) + ") " + str(pk.data))
-        logger.state(str(core.instance.state))
+        logger.send("(" + interface.get_name() + " / " + str(len(pk.data)) + ") " + str(pk.data))
+    logger.state(str(core.instance.state))
 
     controller_board_manager.green_led_on()
-    connection_interface.send_data(pk.data)
+    interface.send_data(pk.data)
 
 
 # パケット受信待機
-def _await_packets():
-    global initialized
+def _await_packets(interface):
     while core.running:
-        if connection_interface.is_waiting():
+        if interface.is_waiting():
             continue
 
         controller_board_manager.blue_led_on()
 
-        raw = connection_interface.read_data()
+        raw = interface.read_data()
         raw_hex = raw.hex()
 
         if core.debug:
-            logger.receive("(" + str(len(raw)) + ") " + raw_hex)
+            logger.receive("(" + interface.get_name() + " / " + str(len(raw)) + ") " + raw_hex)
 
         # 通信開始
-        if (not initialized) and bytearray("Transmission Start", encoding='utf8').hex() in raw_hex:
-            initialized = True
-            event_listener.on_connection_start()
+        if (not interface.initialized) and bytearray("Transmission Start", encoding='utf8').hex() in raw_hex:
+            interface.initialized = True
+            event_listener.on_connection_start(interface)
             continue
 
         # データサイズエラー
         if "Invalid data size" in raw_hex:
-            logger.error("Invalid Data Size Error")
+            logger.error("(" + interface.get_name() + ") Invalid Data Size Error")
             continue
 
         # 受信データを\r\nで区切って処理
         split = str(raw_hex).split("0d0a")
-        global sending_stopped
 
         for text in split:
             array = bytearray.fromhex(text)
@@ -108,17 +106,15 @@ def _await_packets():
 
             # パケット送信停止命令
             if string == "Stop":
-                sending_stopped = True
+                interface.sending_stopped = True
                 continue
 
             # 受信信号（rand_id）
             elif string.isdecimal() and len(string) == 4:
-                sending_stopped = False  # パケット送信停止解除
-                del packet_queue[int(string)]
+                interface.sending_stopped = False  # パケット送信停止解除
+                del interface.packet_queue[int(string)]
                 continue
 
-            # Arduino to Raspberry Pi Packet
-            # TODO RaspberryPiPacket to ArduinoPacket
             elif len(array) > InputPacket.PACKET_LENGTH:
                 byte_ids = array[InputPacket.PACKET_LENGTH:]
                 ids = [0, 0, 0, 0]
@@ -129,8 +125,8 @@ def _await_packets():
 
                 # キューからパケットを削除
                 if len(ids) == 4:
-                    sending_stopped = False  # パケット送信停止解除
-                    del packet_queue[int("".join(ids))]
+                    interface.sending_stopped = False  # パケット送信停止解除
+                    del interface.packet_queue[int("".join(ids))]
 
                 _process_packet(array[0:InputPacket.PACKET_LENGTH - 1])
 
@@ -139,7 +135,7 @@ def _await_packets():
 
             # 予期しないパケットのとき
             else:
-                logger.error("Unexpected Packet Error (" + string + ")")
+                logger.error("(" + interface.get_name() + ") Unexpected Packet Error (" + string + ")")
                 continue
 
 
@@ -192,11 +188,9 @@ def _process_packet(pk_data):
         elif packet.packet_id == BottomServoMotorFeedbackPacket.ID:
             pk = BottomServoMotorFeedbackPacket(packet.data)
             pk.decode()
+
             event_listener.on_bottom_servo_motor_feedback(pk)
 
     except AssertionError as e:
         logger.error(e)
         return
-
-
-

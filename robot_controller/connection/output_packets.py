@@ -55,9 +55,28 @@ class OutputPacket:
         self.data.extend(self.data_3)
         self.data.extend(self.data_4)
 
+    def decode_packet(self):
+        pass
+
+    def decode(self):
+        self.packet_id = int(str(int(self.data[0])) + str(int(self.data[1])))
+        self.rand_id = int(str(int(self.data[2])) + str(int(self.data[3])) + str(int(self.data[4])) + str(int(self.data[5])))
+        self.direction = int(self.data[6])
+        self.type = int(self.data[7])
+        self.data_1 = self.data[8:12]
+        self.data_2 = self.data[12:16]
+        self.data_3 = self.data[16:20]
+        self.data_4 = self.data[20:24]
+
+        self.decode_packet()
+
 
 def float_to_array(f):
     return struct.pack(">f", f)
+
+
+def array_to_float(array):
+    return struct.unpack('>f', bytes(array))[0]
 
 
 class RightSteppingMotorPacket(OutputPacket):
@@ -73,6 +92,10 @@ class RightSteppingMotorPacket(OutputPacket):
         self.data_1 = float_to_array(self.value_1)
         self.data_2 = float_to_array(self.value_2)
 
+    def decode_packet(self):
+        self.value_1 = array_to_float(self.data_1)
+        self.value_2 = array_to_float(self.data_2)
+
 
 class LeftSteppingMotorPacket(OutputPacket):
     ID = 20
@@ -86,6 +109,10 @@ class LeftSteppingMotorPacket(OutputPacket):
     def encode_packet(self):
         self.data_1 = float_to_array(self.value_1)
         self.data_2 = float_to_array(self.value_2)
+
+    def decode_packet(self):
+        self.value_1 = array_to_float(self.data_1)
+        self.value_2 = array_to_float(self.data_2)
 
 
 class BothSteppingMotorPacket(OutputPacket):
@@ -104,6 +131,12 @@ class BothSteppingMotorPacket(OutputPacket):
         self.data_2 = float_to_array(self.value_2)
         self.data_3 = float_to_array(self.value_3)
         self.data_4 = float_to_array(self.value_4)
+
+    def decode_packet(self):
+        self.value_1 = array_to_float(self.data_1)
+        self.value_2 = array_to_float(self.data_2)
+        self.value_3 = array_to_float(self.data_3)
+        self.value_4 = array_to_float(self.data_4)
 
 
 class MeasureDistancePacket(OutputPacket):

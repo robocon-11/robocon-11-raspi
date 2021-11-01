@@ -4,10 +4,11 @@ from connection.interface.connection_interface import ConnectionInterface
 from connection.input_packets import InputPacket
 
 
-class NetworkInterface(ConnectionInterface):
+class UDPInterface(ConnectionInterface):
     socket: socket
 
     def __init__(self):
+        super(UDPInterface, self).__init__()
         self.sender_ip = "172.20.1.1"
         self.sender_port = 4321
         self.sender_address = (self.sender_ip, self.sender_port)
@@ -16,8 +17,6 @@ class NetworkInterface(ConnectionInterface):
         self.dest_address = (self.dest_ip, self.dest_port)
 
     def init(self):
-        logger.info("Using Network Interface")
-
         self.socket = socket(AF_INET, SOCK_DGRAM)
         self.socket.bind(self.sender_address)
 
@@ -30,3 +29,6 @@ class NetworkInterface(ConnectionInterface):
 
     def is_waiting(self):
         return False
+
+    def get_name(self):
+        return "UDPInterface"
