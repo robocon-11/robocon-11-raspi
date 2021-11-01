@@ -8,8 +8,8 @@ class PacketEventListener:
     def add_manager(self, rand_id, manager):
         self.managers[rand_id] = manager
 
-    def on_connection_start(self):
-        core.instance.on_connection_start()
+    def on_connection_start(self, interface):
+        core.instance.on_connection_start(interface.get_name())
 
     def on_right_stepping_motor_alerted(self, pk):
         pass

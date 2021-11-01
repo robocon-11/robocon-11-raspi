@@ -5,10 +5,11 @@ from connection.interface.connection_interface import ConnectionInterface
 
 class SerialInterface(ConnectionInterface):
     ser: serial.Serial
+    
+    def __init__(self):
+        super(SerialInterface, self).__init__()
 
     def init(self):
-        logger.info("Using Serial Interface")
-
         # ls /devでシリアル通信先を確認!!
         self.ser = serial.Serial('/dev/ttyUSB0', 9600)
         if self.ser is None:
@@ -24,3 +25,6 @@ class SerialInterface(ConnectionInterface):
 
     def is_waiting(self):
         return self.ser.in_waiting <= 0
+
+    def get_name(self):
+        return "SerialInterface"

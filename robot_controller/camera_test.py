@@ -12,12 +12,12 @@ def make_sharp_kernel(k: int):
 
 
 # Test for Raspberry Pi Camera
-# cam = cv2.VideoCapture(0, cv2.CAP_MSMF)
-cam = cv2.VideoCapture(0)
+cam = cv2.VideoCapture(0, cv2.CAP_MSMF)
+# cam = cv2.VideoCapture(0)
 cam.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'))
 cam.set(cv2.CAP_PROP_FPS, 20)            # カメラFPSを60FPSに設定
-cam.set(cv2.CAP_PROP_FRAME_WIDTH, 200)   # カメラ画像の横幅を1280に設定
-cam.set(cv2.CAP_PROP_FRAME_HEIGHT, 113)  # カメラ画像の縦幅を720に設定
+cam.set(cv2.CAP_PROP_FRAME_WIDTH, 600)   # カメラ画像の横幅を1280に設定
+cam.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)  # カメラ画像の縦幅を720に設定
 
 queue = []
 while True:
@@ -60,10 +60,10 @@ while True:
             y_sum += array[1]
             radius_sum += array[2]
 
-        img1 = cv2.circle(gray, center=(int(x_sum / len(queue)), int(y_sum / len(queue))), radius=int(radius_sum / len(queue)), color=(0, 0, 255), thickness=3)
+        img1 = cv2.circle(frame, center=(int(x_sum / len(queue)), int(y_sum / len(queue))), radius=int(radius_sum / len(queue)), color=(0, 0, 255), thickness=3)
         cv2.imshow('frame', img1)
     else:
-        cv2.imshow('frame', gray)
+        cv2.imshow('frame', frame)
 
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break

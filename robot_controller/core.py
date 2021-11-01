@@ -46,7 +46,7 @@ class Core:
     last_line_traced_at = 0  # 最後にライン上であることを検出した時間（エポック秒）
 
     # 外部インタフェースとの接続が完了したとき
-    def on_connection_start(self):
+    def on_connection_start(self, interface_name):
         logger.info("Successfully connected.")
         SensorManager() \
             .set_packet(MeasureNineAxisSensorPacket(robot_manager.rand())) \
