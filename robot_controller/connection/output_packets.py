@@ -26,14 +26,14 @@ class OutputPacket:
     # @arg _rand_id: ランダムな4bitの配列
     def __init__(self, _rand_id):
         self.data = []
-        self.packet_id = self.UNKNOWN_PACKET_ID
-        self.direction = self.ROTATION_RIGHT
-        self.type = self.DATA_TYPE_1
+        self.packet_id: int = self.UNKNOWN_PACKET_ID
+        self.direction: int = self.ROTATION_RIGHT
+        self.type: int = self.DATA_TYPE_1
         self.data_1 = [0x00 for _ in range(self.DATA_SIZE)]
         self.data_2 = [0x00 for _ in range(self.DATA_SIZE)]
         self.data_3 = [0x00 for _ in range(self.DATA_SIZE)]
         self.data_4 = [0x00 for _ in range(self.DATA_SIZE)]
-        self.rand_id = _rand_id
+        self.rand_id: int = _rand_id
 
     def encode_packet(self):
         pass
@@ -46,8 +46,8 @@ class OutputPacket:
 
         self.encode_packet()
 
-        self.data.extend([bytes([int(x)])[0] for x in str(self.packet_id)])
-        self.data.extend([bytes([int(x)])[0] for x in str(self.rand_id)])
+        self.data.extend(self.packet_id.to_bytes(2, byteorder='little'))
+        self.data.extend(self.rand_id.to_bytes(4, byteorder='little'))
         self.data.append(bytes([self.direction])[0])
         self.data.append(bytes([self.type])[0])
         self.data.extend(self.data_1)
@@ -59,8 +59,8 @@ class OutputPacket:
         pass
 
     def decode(self):
-        self.packet_id = int(str(int(self.data[0])) + str(int(self.data[1])))
-        self.rand_id = int(str(int(self.data[2])) + str(int(self.data[3])) + str(int(self.data[4])) + str(int(self.data[5])))
+        self.packet_id = int.from_bytes(self.data[0:2], byteorder='little')
+        self.rand_id = int.from_bytes(self.data[2:6], byteorder='little')
         self.direction = int(self.data[6])
         self.type = int(self.data[7])
         self.data_1 = self.data[8:12]
