@@ -100,6 +100,7 @@ def _await_packets(interface):
 
         for text in split:
             array = bytearray.fromhex(text)
+            print(text)
             string = ""
 
             try:
@@ -110,6 +111,7 @@ def _await_packets(interface):
             # パケット送信停止命令
             if string == "Stop":
                 interface.sending_stopped = True
+                logger.debug('(' + interface.get_name() + ') Stop')
                 continue
 
             # 受信信号（rand_id）
