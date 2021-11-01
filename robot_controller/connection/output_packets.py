@@ -46,8 +46,8 @@ class OutputPacket:
 
         self.encode_packet()
 
-        self.data.extend(self.packet_id.to_bytes(2, byteorder='little'))
-        self.data.extend(self.rand_id.to_bytes(4, byteorder='little'))
+        self.data.extend(self.packet_id.to_bytes(2, byteorder='big'))
+        self.data.extend(self.rand_id.to_bytes(4, byteorder='big'))
         self.data.append(bytes([self.direction])[0])
         self.data.append(bytes([self.type])[0])
         self.data.extend(self.data_1)
@@ -59,8 +59,8 @@ class OutputPacket:
         pass
 
     def decode(self):
-        self.packet_id = int.from_bytes(self.data[0:2], byteorder='little')
-        self.rand_id = int.from_bytes(self.data[2:6], byteorder='little')
+        self.packet_id = int.from_bytes(self.data[0:2], byteorder='big')
+        self.rand_id = int.from_bytes(self.data[2:6], byteorder='big')
         self.direction = int(self.data[6])
         self.type = int(self.data[7])
         self.data_1 = self.data[8:12]
