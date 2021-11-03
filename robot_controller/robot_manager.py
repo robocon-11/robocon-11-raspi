@@ -18,14 +18,17 @@ measuring_line_tracer = False  # ライントレーサを計測中かどうか
 measuring_nine_axis = False  # 9軸センサで計測中かどうか
 
 
+_unique_id = 0
+
+
 # 右に90度回転
 def rotate_right():
-    pk_r = RightSteppingMotorPacket(rand())
+    pk_r = RightSteppingMotorPacket(unique_id())
     pk_r.direction = RightSteppingMotorPacket.ROTATION_LOCKED
     pk_r.type = RightSteppingMotorPacket.DATA_TYPE_3
     connection_manager.data_packet(pk_r)
 
-    pk_l = LeftSteppingMotorPacket(rand())
+    pk_l = LeftSteppingMotorPacket(unique_id())
     pk_l.direction = OutputPacket.ROTATION_LEFT
     pk_l.type = RightSteppingMotorPacket.DATA_TYPE_3
     # pk_l.data_1 = create_filled_data1(ROTATION_DEGREE)
@@ -34,11 +37,11 @@ def rotate_right():
 
 # 左に90度回転
 def rotate_left():
-    pk_l = LeftSteppingMotorPacket(rand())
+    pk_l = LeftSteppingMotorPacket(unique_id())
     pk_l.direction = LeftSteppingMotorPacket.ROTATION_LOCKED
     connection_manager.data_packet(pk_l)
 
-    pk_r = RightSteppingMotorPacket(rand())
+    pk_r = RightSteppingMotorPacket(unique_id())
     pk_r.direction = OutputPacket.ROTATION_LEFT
     pk_r.data_1 = create_filled_data1(ROTATION_DEGREE)
     connection_manager.data_packet(pk_l)
@@ -47,7 +50,7 @@ def rotate_left():
 # 指定された距離だけ直進
 # @arg distance(mm)
 def go_straight_distance(distance):
-    pk = BothSteppingMotorPacket(rand())
+    pk = BothSteppingMotorPacket(unique_id())
     pk.direction = BothSteppingMotorPacket.ROTATION_RIGHT
     pk.type = BothSteppingMotorPacket.DATA_TYPE_1
     # TODO 角速度と総角度 360 * distance / (TIRE_RADIUS * 2 * math.pi)
@@ -56,7 +59,7 @@ def go_straight_distance(distance):
 
 # 続けて前進
 def go_straight():
-    pk = BothSteppingMotorPacket(rand())
+    pk = BothSteppingMotorPacket(unique_id())
     pk.direction = BothSteppingMotorPacket.ROTATION_RIGHT
     pk.type = BothSteppingMotorPacket.DATA_TYPE_3
     connection_manager.data_packet(pk)
@@ -64,7 +67,7 @@ def go_straight():
 
 # 停止
 def stop():
-    pk = BothSteppingMotorPacket(rand())
+    pk = BothSteppingMotorPacket(unique_id())
     pk.direction = BothSteppingMotorPacket.ROTATION_LOCKED
     pk.type = BothSteppingMotorPacket.DATA_TYPE_4
     connection_manager.data_packet(pk)
@@ -82,7 +85,7 @@ def measure_distance(method):
     measuring_distance = True
     while measuring_distance:
         SensorManager() \
-            .set_packet(MeasureDistancePacket(rand())) \
+            .set_packet(MeasureDistancePacket(unique_id())) \
             .send() \
             .set_on_receive(lambda pk: method(pk))
         time.sleep(1)  # 計測間隔
@@ -94,7 +97,7 @@ def measure_line_tracer(method):
     measuring_line_tracer = True
     while measuring_line_tracer:
         SensorManager() \
-            .set_packet(MeasureLineTracerPacket(rand())) \
+            .set_packet(MeasureLineTracerPacket(unique_id())) \
             .send() \
             .set_on_receive(lambda pk: method(pk))
         time.sleep(1)  # 計測間隔
@@ -106,7 +109,7 @@ def measure_nine_axis(method):
     measuring_nine_axis = True
     while measuring_nine_axis:
         SensorManager() \
-            .set_packet(MeasureNineAxisSensorPacket(rand())) \
+            .set_packet(MeasureNineAxisSensorPacket(unique_id())) \
             .send() \
             .set_on_receive(lambda pk: method(pk))
         time.sleep(1)  # 計測間隔
@@ -143,7 +146,9 @@ def divide_data(data):
 
 
 # ランダムなパケットIDを生成
-def rand():
-    r = random.randint(1000, 9999)
-    return int(str(r).replace("9", "1"))
+def unique_id():
+    global _unique_id
+    result = _unique_id
+    _unique_id += 1
+    return result
 

@@ -1,12 +1,12 @@
 import threading
 import time
+
 import controller_board_manager
 import core
 import logger
 from connection.input_packets import *
+from connection.interface.serial_interface import ConnectionInterface
 from connection.interface.serial_interface import SerialInterface
-from connection.interface.udp_interface import UDPInterface
-from connection.interface.internal_interface import InternalInterface
 from connection.output_packets import OutputPacket
 from connection.packet_event_listener import PacketEventListener
 
@@ -15,6 +15,8 @@ connection_interfaces: list = [SerialInterface()]
 
 # パケット用イベントリスナ
 event_listener = PacketEventListener()
+
+CONNECTION_TIME_OUT = 1000  # ms
 
 
 # 初期化
@@ -34,16 +36,16 @@ def init():
 
 
 # SensorManagerを保持
-def add_sensor_manager(rand_id, sensor_manager):
-    event_listener.add_manager(rand_id, sensor_manager)
+def add_sensor_manager(unique_id, sensor_manager):
+    event_listener.add_manager(unique_id, sensor_manager)
 
 
 # キューにパケットを追加する
 def data_packet(packet: OutputPacket):
     packet.encode()
     for interface in connection_interfaces:
-        interface.packet_key_queue.insert(0, packet.rand_id)
-        interface.packet_queue[packet.rand_id] = packet
+        interface.packet_key_queue.insert(0, packet.unique_id)
+        interface.packet_queue[packet.unique_id] = packet
 
 
 # パケット送信のキューイング
@@ -51,26 +53,43 @@ def _send_packets():
     while core.running:
         for interface in connection_interfaces:
             if not interface.sending_stopped and not len(interface.packet_key_queue) == 0:
-                rand_id = interface.packet_key_queue.pop()
-                pk = interface.packet_queue[rand_id]
+                unique_id = interface.packet_key_queue.pop()
+                pk = interface.packet_queue[unique_id]
                 _send_packet(interface, pk)
                 time.sleep(0.01)  # 10ms待つ
 
 
 # パケットを送信
-def _send_packet(interface, pk):
+def _send_packet(interface: ConnectionInterface, pk: OutputPacket):
     if core.debug:
-        logger.send("(" + interface.get_name() + " / " + str(len(pk.data)) + ") " + str(pk.data))
+        logger.send(
+            "(" + interface.get_name() + " / " + str(len(pk.data)) + " / " + str(pk.unique_id) + ") " + str(pk.data))
     logger.state(str(core.instance.state))
-    logger.debug("send: " + str(pk.rand_id))
 
     controller_board_manager.green_led_on()
+
     interface.send_data(pk.data)
+    interface.last_sent_packet_unique_id = pk.unique_id
+    interface.last_updated_at = time.time()
 
 
 # パケット受信待機
-def _await_packets(interface):
+def _await_packets(interface: ConnectionInterface):
     while core.running:
+        # パケットを送信してCONNECTION_TIME_OUT(ms)以内に受信通知が来なかった場合
+        if interface.sending_stopped and time.time() - interface.last_sent_packet_unique_id > CONNECTION_TIME_OUT:
+            # パケットの再送を5回以上行ったら...
+            if interface.packet_resent_count > 5:
+                controller_board_manager.red_led_on()
+                logger.error("Tried sending packet (Unique ID/PacketID: {}/{}) to {} for {} times, but could not "
+                             "receive the signal 'Stop'.".format(str(interface.last_sent_packet_unique_id), str(
+                    interface.packet_queue[interface.last_sent_packet_unique_id].packet_id), interface.get_name(),
+                                                                 str(interface.packet_resent_count)))
+
+            _send_packet(interface, interface.packet_queue[interface.last_sent_packet_unique_id])  # 再送する
+            interface.packet_resent_count += 1
+            continue
+
         if interface.is_waiting():
             continue
 
@@ -114,10 +133,12 @@ def _await_packets(interface):
                 logger.debug('(' + interface.get_name() + ') Stop')
                 continue
 
-            # 受信信号（rand_id）
+            # 受信信号（unique_id）
             elif len(array) == 4:
                 interface.sending_stopped = False  # パケット送信停止解除
-                logger.debug("receive: " + str(int.from_bytes(array, byteorder='little')))
+                interface.last_updated_at = time.time()  # interfaceの最終更新時間を更新
+                interface.packet_resent_count = 0  # 再送回数を0に
+                logger.debug("receive: " + str(int.from_bytes(array, byteorder='big')))
                 del interface.packet_queue[int(string)]
                 continue
 

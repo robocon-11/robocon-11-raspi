@@ -23,8 +23,8 @@ class OutputPacket:
     PACKET_LENGTH = 24  # 全パケット長
     DATA_SIZE = 4  # データ長
 
-    # @arg _rand_id: ランダムな4bitの配列
-    def __init__(self, _rand_id):
+    # @arg _unique_id: ランダムな4bitの配列
+    def __init__(self, _unique_id):
         self.data = []
         self.packet_id: int = self.UNKNOWN_PACKET_ID
         self.direction: int = self.ROTATION_RIGHT
@@ -33,7 +33,7 @@ class OutputPacket:
         self.data_2 = [0x00 for _ in range(self.DATA_SIZE)]
         self.data_3 = [0x00 for _ in range(self.DATA_SIZE)]
         self.data_4 = [0x00 for _ in range(self.DATA_SIZE)]
-        self.rand_id: int = _rand_id
+        self.unique_id: int = _unique_id
 
     def encode_packet(self):
         pass
@@ -46,8 +46,8 @@ class OutputPacket:
 
         self.encode_packet()
 
-        self.data.extend(self.packet_id.to_bytes(2, byteorder='little'))
-        self.data.extend(self.rand_id.to_bytes(4, byteorder='little'))
+        self.data.extend(self.packet_id.to_bytes(2, byteorder='big'))
+        self.data.extend(self.unique_id.to_bytes(4, byteorder='big'))
         self.data.append(bytes([self.direction])[0])
         self.data.append(bytes([self.type])[0])
         self.data.extend(self.data_1)
@@ -59,8 +59,8 @@ class OutputPacket:
         pass
 
     def decode(self):
-        self.packet_id = int.from_bytes(self.data[0:2], byteorder='little')
-        self.rand_id = int.from_bytes(self.data[2:6], byteorder='little')
+        self.packet_id = int.from_bytes(self.data[0:2], byteorder='big')
+        self.unique_id = int.from_bytes(self.data[2:6], byteorder='big')
         self.direction = int(self.data[6])
         self.type = int(self.data[7])
         self.data_1 = self.data[8:12]
@@ -82,8 +82,8 @@ def array_to_float(array):
 class RightSteppingMotorPacket(OutputPacket):
     ID = 10
 
-    def __init__(self, _rand_id):
-        super(RightSteppingMotorPacket, self).__init__(_rand_id)
+    def __init__(self, _unique_id):
+        super(RightSteppingMotorPacket, self).__init__(_unique_id)
         self.packet_id = self.ID
         self.value_1: float = 0.0
         self.value_2: float = 0.0
@@ -100,8 +100,8 @@ class RightSteppingMotorPacket(OutputPacket):
 class LeftSteppingMotorPacket(OutputPacket):
     ID = 20
 
-    def __init__(self, _rand_id):
-        super(LeftSteppingMotorPacket, self).__init__(_rand_id)
+    def __init__(self, _unique_id):
+        super(LeftSteppingMotorPacket, self).__init__(_unique_id)
         self.packet_id = self.ID
         self.value_1: float = 0.0
         self.value_2: float = 0.0
@@ -118,8 +118,8 @@ class LeftSteppingMotorPacket(OutputPacket):
 class BothSteppingMotorPacket(OutputPacket):
     ID = 30
 
-    def __init__(self, _rand_id):
-        super(BothSteppingMotorPacket, self).__init__(_rand_id)
+    def __init__(self, _unique_id):
+        super(BothSteppingMotorPacket, self).__init__(_unique_id)
         self.packet_id = self.ID
         self.value_1: float = 0.0  # 右モータのデータ1
         self.value_2: float = 0.0  # 右モータのデータ2
@@ -142,38 +142,38 @@ class BothSteppingMotorPacket(OutputPacket):
 class MeasureDistancePacket(OutputPacket):
     ID = 40
 
-    def __init__(self, _rand_id):
-        super(MeasureDistancePacket, self).__init__(_rand_id)
+    def __init__(self, _unique_id):
+        super(MeasureDistancePacket, self).__init__(_unique_id)
         self.packet_id = self.ID
 
 
 class MeasureLineTracerPacket(OutputPacket):
     ID = 50
 
-    def __init__(self, _rand_id):
-        super(MeasureLineTracerPacket, self).__init__(_rand_id)
+    def __init__(self, _unique_id):
+        super(MeasureLineTracerPacket, self).__init__(_unique_id)
         self.packet_id = self.ID
 
 
 class UpperServoMotorPacket(OutputPacket):
     ID = 60
 
-    def __init__(self, _rand_id):
-        super(UpperServoMotorPacket, self).__init__(_rand_id)
+    def __init__(self, _unique_id):
+        super(UpperServoMotorPacket, self).__init__(_unique_id)
         self.packet_id = self.ID
 
 
 class BottomServoMotorPacket(OutputPacket):
     ID = 70
 
-    def __init__(self, _rand_id):
-        super(BottomServoMotorPacket, self).__init__(_rand_id)
+    def __init__(self, _unique_id):
+        super(BottomServoMotorPacket, self).__init__(_unique_id)
         self.packet_id = self.ID
 
 
 class MeasureNineAxisSensorPacket(OutputPacket):
     ID = 80
 
-    def __init__(self, _rand_id):
-        super(MeasureNineAxisSensorPacket, self).__init__(_rand_id)
+    def __init__(self, _unique_id):
+        super(MeasureNineAxisSensorPacket, self).__init__(_unique_id)
         self.packet_id = self.ID

@@ -7,12 +7,12 @@ class InputPacket:
     DATA_LENGTH = 36  # データ長
 
     UNKNOWN_PACKET_ID = -1
-    UNKNOWN_RANDOM_ID = -1
+    UNKNOWN_UNIQUE_ID = -1
 
     def __init__(self, data):
         self.data = data
         self.packet_id = self.UNKNOWN_PACKET_ID
-        self.rand_id = self.UNKNOWN_RANDOM_ID
+        self.unique_id = self.UNKNOWN_UNIQUE_ID
         self.payload = [
             [0x00, 0x00, 0x00, 0x00],
             [0x00, 0x00, 0x00, 0x00],
@@ -31,8 +31,8 @@ class InputPacket:
     def decode(self):
         assert len(self.data) == self.PACKET_LENGTH
 
-        self.packet_id = int.from_bytes(self.data[0:2], byteorder='little')
-        self.rand_id = int.from_bytes(self.data[2:6], byteorder='little')
+        self.packet_id = int.from_bytes(self.data[0:2], byteorder='big')
+        self.unique_id = int.from_bytes(self.data[2:6], byteorder='big')
 
         for i in range(0, 9):
             index = i * 4 + 6

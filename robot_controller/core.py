@@ -49,7 +49,7 @@ class Core:
     def on_connection_start(self, interface_name):
         logger.info("Successfully connected.")
         SensorManager() \
-            .set_packet(MeasureNineAxisSensorPacket(robot_manager.rand())) \
+            .set_packet(MeasureNineAxisSensorPacket(robot_manager.unique_id())) \
             .send() \
             .set_on_receive(lambda pk: self.on_nine_axis_sensor_resulted(pk))
 
