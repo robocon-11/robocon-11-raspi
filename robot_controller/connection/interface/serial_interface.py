@@ -1,5 +1,6 @@
 import serial
 import logger
+from serial import SerialException
 from connection.interface.connection_interface import ConnectionInterface
 
 
@@ -13,7 +14,7 @@ class SerialInterface(ConnectionInterface):
         # ls /devでシリアル通信先を確認!!
         try:
             self.ser = serial.Serial('/dev/ttyUSB0', 9600)
-        except FileNotFoundError:
+        except SerialException:
             self.ser = serial.Serial('/dev/ttyUSB1', 9600)
 
         if self.ser is None:
