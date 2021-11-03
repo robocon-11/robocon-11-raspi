@@ -16,7 +16,7 @@ connection_interfaces: list = [SerialInterface()]
 # パケット用イベントリスナ
 event_listener = PacketEventListener()
 
-CONNECTION_TIME_OUT = 1000  # ms
+CONNECTION_TIME_OUT = 3  # s
 
 
 # 初期化
@@ -55,12 +55,12 @@ def _send_packets():
             if not interface.sending_stopped and not len(interface.packet_key_queue) == 0:
                 unique_id = interface.packet_key_queue.pop()
                 pk = interface.packet_queue[unique_id]
-                _send_packet(interface, pk)
+                _send_packet(interface, pk, True)
                 time.sleep(0.01)  # 10ms待つ
 
 
 # パケットを送信
-def _send_packet(interface: ConnectionInterface, pk: OutputPacket):
+def _send_packet(interface: ConnectionInterface, pk: OutputPacket, update_time=False):
     if core.debug:
         logger.send(
             "(" + interface.get_name() + " / " + str(len(pk.data)) + " / " + str(pk.unique_id) + ") " + str(pk.data))
@@ -69,15 +69,17 @@ def _send_packet(interface: ConnectionInterface, pk: OutputPacket):
     controller_board_manager.green_led_on()
 
     interface.send_data(pk.data)
-    interface.last_sent_packet_unique_id = pk.unique_id
-    interface.last_updated_at = time.time()
+
+    if update_time:
+        interface.last_sent_packet_unique_id = pk.unique_id
+        interface.last_updated_at = time.time()
 
 
 # パケット受信待機
 def _await_packets(interface: ConnectionInterface):
     while core.running:
         # パケットを送信してCONNECTION_TIME_OUT(ms)以内に受信通知が来なかった場合
-        if interface.sending_stopped and time.time() - interface.last_sent_packet_unique_id > CONNECTION_TIME_OUT:
+        if interface.sending_stopped and time.time() - interface.last_updated_at > CONNECTION_TIME_OUT:
             # パケットの再送を5回以上行ったら...
             if interface.packet_resent_count > 5:
                 controller_board_manager.red_led_on()
@@ -88,7 +90,6 @@ def _await_packets(interface: ConnectionInterface):
 
             _send_packet(interface, interface.packet_queue[interface.last_sent_packet_unique_id])  # 再送する
             interface.packet_resent_count += 1
-            continue
 
         if interface.is_waiting():
             continue
@@ -131,6 +132,13 @@ def _await_packets(interface: ConnectionInterface):
             if string == "Stop":
                 interface.sending_stopped = True
                 logger.debug('(' + interface.get_name() + ') Stop')
+                continue
+
+            elif string.startswith('>'):
+                logger.debug_i('(' + interface.get_name() + ') Stop')
+                continue
+
+            elif len(array) == 0:
                 continue
 
             # 受信信号（unique_id）

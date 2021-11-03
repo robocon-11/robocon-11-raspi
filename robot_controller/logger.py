@@ -24,3 +24,7 @@ def receive(text):
 
 def state(text):
     print("\033[33m[STATE] \033[0m" + text)
+
+
+def debug_i(text):
+    print("\033[36m[DEBUG] " + text)

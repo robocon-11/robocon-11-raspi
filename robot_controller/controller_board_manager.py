@@ -99,6 +99,6 @@ def _on_button_released(button: Button):
             core.running = True
             core.instance = core.Core()
         elif button.pin.number == PIN_BUTTON_STOP:
-            logger.critical("Process stopped by the controller.")
+            logger.critical("Process is stopped by the controller.")
             exit(0)
     button_was_held = False
