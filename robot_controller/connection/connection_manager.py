@@ -56,20 +56,22 @@ def _send_packets():
                 unique_id = interface.packet_key_queue.pop()
                 pk = interface.packet_queue[unique_id]
                 _send_packet(interface, pk, True)
-                time.sleep(0.01)  # 10ms待つ
+                time.sleep(0.1)  # 10ms待つ
 
 
 # パケットを送信
 def _send_packet(interface: ConnectionInterface, pk: OutputPacket, update_time=False):
     if core.debug:
         logger.send(
-            "(" + interface.get_name() + " / " + str(len(pk.data)) + " / " + str(pk.unique_id) + ") " + str(pk.data))
+            "(" + interface.get_name() + " / " + str(len(pk.data)) + " / " + str(pk.unique_id) + ") " + bytes(pk.data).hex())
     logger.state(str(core.instance.state))
 
     controller_board_manager.green_led_on()
 
     interface.send_data(pk.data)
+    interface.sending_stopped = True
 
+    # logger.debug('(' + interface.get_name() + ') Stop')
     if update_time:
         interface.last_sent_packet_unique_id = pk.unique_id
         interface.last_updated_at = time.time()
@@ -77,6 +79,8 @@ def _send_packet(interface: ConnectionInterface, pk: OutputPacket, update_time=F
 
 # パケット受信待機
 def _await_packets(interface: ConnectionInterface):
+    buffer = []
+
     while core.running:
         # パケットを送信してCONNECTION_TIME_OUT(ms)以内に受信通知が来なかった場合
         if interface.sending_stopped and time.time() - interface.last_updated_at > CONNECTION_TIME_OUT:
@@ -129,13 +133,8 @@ def _await_packets(interface: ConnectionInterface):
                 pass
 
             # パケット送信停止命令
-            if string == "Stop":
-                interface.sending_stopped = True
-                logger.debug('(' + interface.get_name() + ') Stop')
-                continue
-
-            elif string.startswith('>'):
-                logger.debug_i('(' + interface.get_name() + ') Stop')
+            if string.startswith('>'):
+                logger.debug_i('(' + interface.get_name() + ') ' + string)
                 continue
 
             elif len(array) == 0:
@@ -146,9 +145,18 @@ def _await_packets(interface: ConnectionInterface):
                 interface.sending_stopped = False  # パケット送信停止解除
                 interface.last_updated_at = time.time()  # interfaceの最終更新時間を更新
                 interface.packet_resent_count = 0  # 再送回数を0に
-                logger.debug("receive: " + str(int.from_bytes(array, byteorder='big')))
-                del interface.packet_queue[int(string)]
+                unique_id = int.from_bytes(array, byteorder='big')
+                logger.debug("receive: " + str(unique_id))
+                del interface.packet_queue[unique_id]
                 continue
+
+            elif len(array) == InputPacket.PACKET_LENGTH - 10:
+                buffer.extend(array)
+
+            elif len(buffer) == InputPacket.PACKET_LENGTH - 10 and len(array) == 10:
+                buffer.extend(array)
+                _process_packet(buffer)
+                buffer = []
 
             elif len(array) > InputPacket.PACKET_LENGTH:
                 byte_ids = array[InputPacket.PACKET_LENGTH:]

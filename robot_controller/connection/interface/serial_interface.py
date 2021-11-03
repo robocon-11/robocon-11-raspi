@@ -11,7 +11,7 @@ class SerialInterface(ConnectionInterface):
 
     def init(self):
         # ls /devでシリアル通信先を確認!!
-        self.ser = serial.Serial('/dev/ttyUSB0', 9600)
+        self.ser = serial.Serial('/dev/ttyUSB1', 9600)
         if self.ser is None:
             logger.error("/dev/ttyUSB0 is not found.")
             exit(1)
