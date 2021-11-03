@@ -177,3 +177,7 @@ class MeasureNineAxisSensorPacket(OutputPacket):
     def __init__(self, _unique_id):
         super(MeasureNineAxisSensorPacket, self).__init__(_unique_id)
         self.packet_id = self.ID
+        self.data_1 = [0x04, 0x03, 0x66, 0x89]
+        self.data_2 = [0x21, 0xab, 0x33, 0x22]
+        self.data_3 = [0xeb, 0x89, 0x56, 0x19]
+        self.data_4 = [0x56, 0x67, 0x87, 0x89]
