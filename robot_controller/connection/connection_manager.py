@@ -143,41 +143,21 @@ def _await_packets(interface: ConnectionInterface):
                 continue
 
             # 受信信号（unique_id）
-            elif len(array) == 4:
+            elif len(array) == 4 and int.from_bytes(array, byteorder='big') == interface.last_sent_packet_unique_id:
                 interface.sending_stopped = False  # パケット送信停止解除
                 interface.last_updated_at = time.time()  # interfaceの最終更新時間を更新
                 interface.packet_resent_count = 0  # 再送回数を0に
                 unique_id = int.from_bytes(array, byteorder='big')
-                logger.debug("receive: " + str(unique_id))
+                # logger.debug("receive: " + str(unique_id))
                 del interface.packet_queue[unique_id]
-                # interface.packet_key_queue.remove(unique_id)
                 continue
 
-            elif len(array) == InputPacket.PACKET_LENGTH - 16:
+            elif len(array) <= 32 or len(buffer) + len(array) == InputPacket.PACKET_LENGTH:
                 buffer.extend(array)
 
-            elif len(buffer) == InputPacket.PACKET_LENGTH - 16 and len(array) == 16:
-                buffer.extend(array)
-                _process_packet(buffer)
-                buffer = []
-
-            elif len(array) > InputPacket.PACKET_LENGTH:
-                byte_ids = array[InputPacket.PACKET_LENGTH:]
-                ids = [0, 0, 0, 0]
-                i = 0
-                for b in byte_ids:
-                    ids[i] = str(int(b))
-                    i = i + 1
-
-                # キューからパケットを削除
-                if len(ids) == 4:
-                    interface.sending_stopped = False  # パケット送信停止解除
-                    del interface.packet_queue[int("".join(ids))]
-
-                _process_packet(array[0:InputPacket.PACKET_LENGTH - 1])
-
-            elif len(array) == InputPacket.PACKET_LENGTH:
-                _process_packet(array)
+                if len(buffer) + len(array) == InputPacket.PACKET_LENGTH:
+                    _process_packet(buffer)
+                    buffer.clear()
 
             # 予期しないパケットのとき
             else:
