@@ -54,6 +54,7 @@ def _send_packets():
         for interface in connection_interfaces:
             if not interface.sending_stopped and not len(interface.packet_key_queue) == 0:
                 unique_id = interface.packet_key_queue.pop()
+                logger.debug(unique_id)
                 pk = interface.packet_queue[unique_id]
                 _send_packet(interface, pk, True)
                 time.sleep(0.1)  # 10ms待つ
