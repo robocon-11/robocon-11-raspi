@@ -18,7 +18,7 @@ measuring_line_tracer = False  # ライントレーサを計測中かどうか
 measuring_nine_axis = False  # 9軸センサで計測中かどうか
 
 
-_unique_id = 1234
+_unique_id = 0
 
 
 # 右に90度回転
