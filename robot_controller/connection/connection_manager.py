@@ -153,13 +153,12 @@ def _await_packets(interface: ConnectionInterface):
                 continue
 
             elif len(array) <= 32 or len(buffer) + len(array) == InputPacket.PACKET_LENGTH:
-                buffer.extend(array)
-                logger.debug(str(len(array)))
-
                 if len(buffer) + len(array) == InputPacket.PACKET_LENGTH:
-                    logger.debug("giufaeg")
+                    buffer.extend(array)
                     _process_packet(buffer)
                     buffer.clear()
+                else:
+                    buffer.extend(array)
 
                 continue
 
