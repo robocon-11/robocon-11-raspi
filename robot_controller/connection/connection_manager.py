@@ -108,7 +108,7 @@ def _await_packets(interface: ConnectionInterface):
 
         if core.debug:
             logger.receive("(" + interface.get_name() + " / " + str(len(raw)) + ") " + raw_hex)
-            logger.debug("(" + interface.get_name() + " / " + str(len(raw)) + ") " + str(raw, encoding='utf-8'))
+            # logger.debug("(" + interface.get_name() + " / " + str(len(raw)) + ") " + str(raw, encoding='utf-8'))
 
         # 通信開始
         if (not interface.initialized) and bytearray("Transmission Start", encoding='utf8').hex() in raw_hex:
