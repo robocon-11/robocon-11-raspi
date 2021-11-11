@@ -153,10 +153,10 @@ def _await_packets(interface: ConnectionInterface):
                 # interface.packet_key_queue.remove(unique_id)
                 continue
 
-            elif len(array) == InputPacket.PACKET_LENGTH - 10:
+            elif len(array) == InputPacket.PACKET_LENGTH - 16:
                 buffer.extend(array)
 
-            elif len(buffer) == InputPacket.PACKET_LENGTH - 10 and len(array) == 10:
+            elif len(buffer) == InputPacket.PACKET_LENGTH - 16 and len(array) == 16:
                 buffer.extend(array)
                 _process_packet(buffer)
                 buffer = []
