@@ -57,7 +57,7 @@ def _send_packets():
                 pk = interface.packet_queue[unique_id]
                 logger.debug(str(unique_id) + ":" + str(pk.packet_id))
                 _send_packet(interface, pk, True)
-                time.sleep(0.1)  # 10ms待つ
+                time.sleep(0.01)  # 10ms待つ
 
 
 # パケットを送信
@@ -150,6 +150,7 @@ def _await_packets(interface: ConnectionInterface):
                 unique_id = int.from_bytes(array, byteorder='big')
                 logger.debug("receive: " + str(unique_id))
                 del interface.packet_queue[unique_id]
+                interface.packet_key_queue.remove(unique_id)
                 continue
 
             elif len(array) == InputPacket.PACKET_LENGTH - 10:

@@ -60,7 +60,6 @@ class Core:
 
         if self.state == self.STATE_READY:
             self.state = self.STATE_STAND_BY
-            logger.debug("dktdutk")
             robot_manager.direction = pk.geomagnetism  # TODO pkから方角を読み取って記録する
             robot_manager.go_straight()
             robot_manager.measure(robot_manager.measure_line_tracer, self.on_line_tracer_resulted)
