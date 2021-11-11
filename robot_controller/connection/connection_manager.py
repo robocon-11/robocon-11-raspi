@@ -148,12 +148,13 @@ def _await_packets(interface: ConnectionInterface):
                 interface.last_updated_at = time.time()  # interfaceの最終更新時間を更新
                 interface.packet_resent_count = 0  # 再送回数を0に
                 unique_id = int.from_bytes(array, byteorder='big')
-                # logger.debug("receive: " + str(unique_id))
+                logger.debug("receive: " + str(unique_id))
                 del interface.packet_queue[unique_id]
                 continue
 
             elif len(array) <= 32 or len(buffer) + len(array) == InputPacket.PACKET_LENGTH:
                 buffer.extend(array)
+                logger.debug(str(len(array)))
 
                 if len(buffer) + len(array) == InputPacket.PACKET_LENGTH:
                     _process_packet(buffer)
