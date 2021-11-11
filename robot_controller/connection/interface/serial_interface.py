@@ -21,6 +21,8 @@ class SerialInterface(ConnectionInterface):
             logger.error("/dev/ttyUSB0 is not found.")
             exit(1)
 
+        self.ser.set_buffer_size(rx_size=4096, tx_size=4096)
+
     def send_data(self, data: bytearray):
         self.ser.write(data)
         self.ser.flush()
