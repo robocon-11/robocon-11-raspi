@@ -47,6 +47,7 @@ class LSM9D01:
             GX = alter(rawGX)
             GY = alter(rawGY)
             GZ = alter(rawGZ)
+            print(GX)
             # print "GX: " + "%d" % GX + "",
             # print "GY: " + "%d" % GY + "",
             # print "GZ: " + "%d" % GZ + ""
@@ -67,9 +68,9 @@ class LSM9D01:
             time.sleep(1)
 
     def __init__(self):
-        # th = threading.Thread(target=self._load)
-        # th.start()
+        th = threading.Thread(target=self._load)
+        th.start()
         pass
 
 
-# LSM9D01 = LSM9D01()
+LSM9D01 = LSM9D01()

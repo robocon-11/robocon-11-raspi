@@ -69,10 +69,9 @@ def _send_packet(interface: ConnectionInterface, pk: OutputPacket, update_time=F
 
     controller_board_manager.green_led_on()
 
-    interface.send_data(pk.data)
+    interface.send_data(pk.data)  # インターフェースにデータを送信
     interface.sending_stopped = True
 
-    # logger.debug('(' + interface.get_name() + ') Stop')
     if update_time:
         interface.last_sent_packet_unique_id = pk.unique_id
         interface.last_updated_at = time.time()
