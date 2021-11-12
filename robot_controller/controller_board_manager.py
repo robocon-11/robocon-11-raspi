@@ -63,6 +63,7 @@ def _led_scheduler():
 
 
 def blue_led_on():
+    print("flyuflvitilytliulkugl l-----------------------")
     global _blue_led
     _blue_led = True
 
