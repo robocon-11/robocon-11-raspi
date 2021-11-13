@@ -51,7 +51,6 @@ def _led_scheduler():
     while core.running:
         if _blue_led:
             _blue.on()
-            print("scauovcaouuycuwg9")
             time.sleep(0.2)
             _blue.off()
             _blue_led = False
@@ -63,7 +62,6 @@ def _led_scheduler():
 
 
 def blue_led_on():
-    print("flyuflvitilytliulkugl l-----------------------")
     global _blue_led
     _blue_led = True
 
