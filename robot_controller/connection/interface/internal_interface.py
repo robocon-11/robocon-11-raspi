@@ -28,4 +28,4 @@ class InternalInterface(ConnectionInterface):
         return False
 
     def get_name(self):
-        return "InternalInterface"
+        return "Internal"

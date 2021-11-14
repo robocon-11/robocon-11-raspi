@@ -1,24 +1,75 @@
-import random
-import struct
+import math
 import threading
 import time
+
+import core
 from connection import connection_manager
 from connection.output_packets import *
 from sensor.sensor_mamager import SensorManager
 
+STATE_READY = 0  # 電源投入後
+STATE_STAND_BY = 1  # センサ計測完了
+STATE_PHASE_1_STARTED = 2  # 1回目に左側のS/Bラインを超えた
+STATE_PHASE_1_EXCEEDED_HALF_LINE_1 = 3  # 1回目に中心線を超えた
+STATE_PHASE_1_TURNED_CORNER_1 = 4  # スタート後1つめの角を曲がった
+STATE_PHASE_1_TURNED_CORNER_2 = 5  # スタート後2つめの角を曲がった
+STATE_PHASE_1_EXCEEDED_HALF_LINE_2 = 6  # 2回目に中心線を超えた
+STATE_PHASE_1_EXCEEDED_SB_LINE = 7  # S/Bラインを超えた
+STATE_PHASE_1_TURNED_CORNER_3 = 8  # スタート後3つめの角を曲がった
+STATE_PHASE_1_TURNED_CORNER_4 = 9  # スタート後4つめの角を曲がった
+STATE_PHASE_2_STARTED = 10  # 2回目に左側のS/Bラインを超えた
+STATE_PHASE_2_EXCEEDED_HALF_LINE_1 = 11
+STATE_PHASE_2_TURNED_CORNER_1 = 12
+STATE_PHASE_2_TURNED_CORNER_2 = 13
+STATE_PHASE_2_EXCEEDED_HALF_LINE_2 = 14
+STATE_PHASE_2_EXCEEDED_SB_LINE = 15
+STATE_PHASE_2_TURNED_CORNER_3 = 16
+STATE_PHASE_2_TURNED_CORNER_4 = 17
+STATE_PHASE_3_STARTED = 18  # 3回目に左側のS/Bラインを超えた
+STATE_PHASE_3_EXCEEDED_HALF_LINE_1 = 19
+STATE_PHASE_3_TURNED_CORNER_1 = 20
+STATE_PHASE_3_TURNED_CORNER_2 = 21
+STATE_PHASE_3_EXCEEDED_HALF_LINE_2 = 22
+STATE_PHASE_3_EXCEEDED_SB_LINE = 23
+# STATE_PHASE_3_TURNED_CORNER_3 = 24
+# STATE_PHASE_3_TURNED_CORNER_4 = 25
+STATE_FINISHED = 100  # 4回目に左側のS/Bラインを超えた
 
+# 定数
 TIRE_RADIUS = 45.0  # タイヤ半径[mm]
+TIRE_DISTANCE = 180.0  # TODO タイヤ同士の距離[mm]
 ROTATION_DEGREE = 90.0  # 回転時にタイヤが回る角度[deg]
+MAX_ANGULAR_VELOCITY = 264.7  # タイヤの最大角速度[deg/s]
+INTERVAL = 0.1  # 計測間隔[s]
+CORN_WIDTH = 380  # カラーコーンの一辺の長さ[mm]
 
-x = 0.0  # 自己位置の合計変位x
-y = 0.0  # 自己位置の合計変位y
+# 自己位置推定（ステージの左上が基準点）
+x = 840.0  # 自己位置x[mm]
+y = 0.0  # 自己位置y[mm]
+a_v_l = MAX_ANGULAR_VELOCITY  # 左車輪角速度[deg/s]
+a_v_r = MAX_ANGULAR_VELOCITY  # 右車輪角速度[deg/s]
+v_l = 0.0  # 左車輪の設置点での速度[mm/s]
+v_r = 0.0  # 右車輪の設置点での速度[mm/s]
+v = 0.0  # 車速[mm/s]
+w = 0.0  # 旋回角速度（両車輪の中点）[deg/s]
+p = 0.0  # 旋回半径[mm]
+rot = 0.0  # 現在の角度[deg]
+state = STATE_READY  # 現在の処理段階
+stopped = False  # 追尾先が停止中かどうか
+
+mouse_x = 850.0
+mouse_y = 420.0 + TIRE_DISTANCE / 2
+
 direction = 0.0  # degree
 measuring_distance = False  # 距離を計測中かどうか
 measuring_line_tracer = False  # ライントレーサを計測中かどうか
 measuring_nine_axis = False  # 9軸センサで計測中かどうか
 
+_unique_id = 0  # パケットID
 
-_unique_id = 0
+
+def start():
+    threading.Thread(target=_heart_beat).start()
 
 
 # 右に90度回転
@@ -152,3 +203,81 @@ def unique_id():
     _unique_id += 1
     return result
 
+
+def _mouse_running():
+    global mouse_x, mouse_y, v
+    sigmoid_coefficient = 1485 - (420 + TIRE_DISTANCE / 2 + 400 + CORN_WIDTH / 2)
+    if not stopped:
+        # 1回目に1つ目のコーナーを曲がる前まではシグモイド関数に沿って移動
+        if (state == STATE_STAND_BY
+            or state == STATE_PHASE_1_STARTED
+            or state == STATE_PHASE_1_EXCEEDED_HALF_LINE_1) and x <= 3740:
+            mouse_x = x + 100
+            mouse_y = - (sigmoid_coefficient / (1 + math.e ** (0.00336 * (mouse_x - 2520))) - (
+                    420 + TIRE_DISTANCE / 2 + 400 + CORN_WIDTH / 2))  # sigmoid function
+
+        # 第1、第2カーブは半円に沿って移動
+        elif (state == STATE_PHASE_1_EXCEEDED_HALF_LINE_1
+              or state == STATE_PHASE_2_EXCEEDED_HALF_LINE_1
+              or state == STATE_PHASE_3_EXCEEDED_HALF_LINE_1
+              or state == STATE_PHASE_1_TURNED_CORNER_1
+              or state == STATE_PHASE_2_TURNED_CORNER_1
+              or state == STATE_PHASE_3_TURNED_CORNER_1) and 3740 <= x:
+            mouse_x = x + 100
+            mouse_y = 1485 - math.sqrt(348100 - (mouse_x - 3740) ** 2)
+
+            # 1つめのコーナーを曲がっていたら
+            if state == STATE_PHASE_1_TURNED_CORNER_1 \
+                    or state == STATE_PHASE_2_TURNED_CORNER_1 \
+                    or state == STATE_PHASE_3_TURNED_CORNER_1:
+                mouse_y += 400 + CORN_WIDTH
+
+        # 第2カーブを曲がったらスタートラインに行くまでは直線移動
+        elif (state == STATE_PHASE_1_TURNED_CORNER_2
+              or state == STATE_PHASE_2_TURNED_CORNER_2
+              or state == STATE_PHASE_3_TURNED_CORNER_2
+              or state == STATE_PHASE_1_EXCEEDED_HALF_LINE_2
+              or state == STATE_PHASE_2_EXCEEDED_HALF_LINE_2
+              or state == STATE_PHASE_3_EXCEEDED_HALF_LINE_2) and x <= 3740:
+            mouse_x = x - 100
+            mouse_y = 1485 + 400 + TIRE_DISTANCE / 2  # + CORN_WIDTH / 2
+
+        # 第3, 4カーブも半円に沿って移動
+        elif (state == STATE_PHASE_1_EXCEEDED_SB_LINE
+              or state == STATE_PHASE_2_EXCEEDED_SB_LINE
+              or state == STATE_PHASE_3_EXCEEDED_SB_LINE
+              or state == STATE_PHASE_1_TURNED_CORNER_3
+              or state == STATE_PHASE_2_TURNED_CORNER_3) and x <= 840:
+            mouse_x = x - 100
+            mouse_y = 1485 - math.sqrt(240100 - (mouse_x - 840) ** 2) + 490
+
+            # 3つめのコーナーを曲がっていたら
+            if state == STATE_PHASE_1_TURNED_CORNER_1 \
+                    or state == STATE_PHASE_2_TURNED_CORNER_1 \
+                    or state == STATE_PHASE_3_TURNED_CORNER_1:
+                mouse_y -= 490
+
+        # 第4カーブを曲がったら直線移動
+        elif (state == STATE_PHASE_1_TURNED_CORNER_4
+              or state == STATE_PHASE_2_TURNED_CORNER_4
+              or state == STATE_PHASE_2_EXCEEDED_SB_LINE
+              or state == STATE_PHASE_3_EXCEEDED_SB_LINE
+              or state == STATE_PHASE_2_EXCEEDED_HALF_LINE_1
+              or state == STATE_PHASE_3_EXCEEDED_HALF_LINE_1) and x <= 840:
+            mouse_x = x + 100
+            mouse_y = - (220 * mouse_x / 2900 - 1053.72)
+
+
+def _heart_beat():
+    while core.running:
+        _mouse_running()
+
+        global v_r, v_l, a_v_r, a_v_l, x, y, v, w, p, rot
+        v_r = TIRE_RADIUS / (a_v_r / INTERVAL)
+        v_l = TIRE_RADIUS / (a_v_l / INTERVAL)
+        p = TIRE_DISTANCE * (v_r + v_l) / (v_r - v_l) if v_r - v_l != 0 else -1
+        w = (v_r - v_l) / (2 * TIRE_DISTANCE)
+        v = (v_r + v_l) / 2
+        rot = w * INTERVAL
+        x += v * math.cos(rot)
+        y += v * math.sin(rot)

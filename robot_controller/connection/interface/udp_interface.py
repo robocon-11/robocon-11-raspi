@@ -7,14 +7,15 @@ from connection.input_packets import InputPacket
 class UDPInterface(ConnectionInterface):
     socket: socket
 
-    def __init__(self):
+    def __init__(self, dest_ip, dest_port, name):
         super(UDPInterface, self).__init__()
         self.sender_ip = "172.20.1.1"
         self.sender_port = 4321
         self.sender_address = (self.sender_ip, self.sender_port)
-        self.dest_ip = "172.20.1.137"  # w -iで確認
-        self.dest_port = 1234
+        self.dest_ip = dest_ip  # w -iで確認
+        self.dest_port = dest_port
         self.dest_address = (self.dest_ip, self.dest_port)
+        self.name = name
 
     def init(self):
         self.socket = socket(AF_INET, SOCK_DGRAM)
@@ -31,4 +32,4 @@ class UDPInterface(ConnectionInterface):
         return False
 
     def get_name(self):
-        return "UDPInterface"
+        return self.name
