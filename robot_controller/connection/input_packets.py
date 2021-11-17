@@ -94,7 +94,7 @@ class LineTracerResultPacket(InputPacket):
 
     def __init__(self, data):
         super(LineTracerResultPacket, self).__init__(data)
-        self.on_line = False
+        self.is_on_line = False
 
     def decode_packet(self):
         if self.payload[0][3] == 0x01:

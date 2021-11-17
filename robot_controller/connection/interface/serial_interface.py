@@ -1,6 +1,5 @@
 import serial
 import logger
-from serial import SerialException
 from connection.interface.connection_interface import ConnectionInterface
 
 

@@ -2,12 +2,14 @@ import logger
 from connection.interface.connection_interface import ConnectionInterface
 from connection.output_packets import *
 from sensor.lsm9d01_manager import LSM9D01
+from threading import Thread
 
 
 class InternalInterface(ConnectionInterface):
 
     def __init__(self):
         super(InternalInterface, self).__init__()
+        self.received_packets = []
 
     def init(self):
         pass
@@ -29,3 +31,10 @@ class InternalInterface(ConnectionInterface):
 
     def get_name(self):
         return "Internal"
+
+    def _update(self):
+        while True:
+            if len (self.packets) != 0:
+                pk = self.packets.pop()
+
+

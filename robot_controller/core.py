@@ -15,7 +15,6 @@ running = False  # 実行中かどうか
 class Core:
 
     lost_ball = False  # ボールを保持しているかどうか
-    state = STATE_READY  # フェーズ
     last_line_traced_at = 0  # 最後にライン上であることを検出した時間（エポック秒）
 
     # 外部インタフェースとの接続が完了したとき
@@ -32,113 +31,6 @@ class Core:
             logger.debug("GeoMagnetism: " + str(pk.geomagnetism))
 
         robot_manager.start()
-
-        # TODO 以下はいらない
-        if self.state == self.STATE_READY:
-            self.state = self.STATE_STAND_BY
-            robot_manager.direction = pk.geomagnetism  # TODO pkから方角を読み取って記録する
-            robot_manager.go_straight()
-            robot_manager.measure(robot_manager.measure_line_tracer, self.on_line_tracer_resulted)
-            return
-
-        elif self.state == self.STATE_PHASE_1_EXCEEDED_HALF_LINE_1:
-            if abs(90 - abs(robot_manager.direction - pk.geomagnetism)) < 2:
-                self.state = self.STATE_PHASE_1_TURNED_CORNER_1
-                robot_manager.stop_measuring_nine_axis()
-                robot_manager.stop()
-                robot_manager.go_straight()
-                robot_manager.measure(robot_manager.measure_distance, self.on_distance_sensor_resulted)
-
-        elif self.state == self.STATE_PHASE_1_TURNED_CORNER_1:
-            if abs(180 - abs(robot_manager.direction - pk.geomagnetism)) < 2:
-                self.state = self.STATE_PHASE_1_TURNED_CORNER_2
-                robot_manager.stop_measuring_nine_axis()
-                robot_manager.stop()
-                robot_manager.go_straight()
-                robot_manager.measure(robot_manager.measure_line_tracer, self.on_line_tracer_resulted)
-
-        elif self.state == self.STATE_PHASE_1_EXCEEDED_SB_LINE:
-            if abs(270 - abs(robot_manager.direction - pk.geomagnetism)) < 2:
-                self.state = self.STATE_PHASE_1_TURNED_CORNER_3
-                robot_manager.stop_measuring_nine_axis()
-                robot_manager.stop()
-                robot_manager.go_straight()
-                robot_manager.measure(robot_manager.measure_distance, self.on_distance_sensor_resulted)
-
-        elif self.state == self.STATE_PHASE_1_TURNED_CORNER_3:
-            logger.debug(robot_manager.direction - pk.geomagnetism)
-            if abs(360 - abs(robot_manager.direction - pk.geomagnetism)) < 2:
-                self.state = self.STATE_PHASE_1_TURNED_CORNER_4
-                robot_manager.stop_measuring_nine_axis()
-                robot_manager.stop()
-                robot_manager.go_straight()
-                robot_manager.measure(robot_manager.measure_line_tracer, self.on_line_tracer_resulted)
-
-    # ライントレーサの計測が完了したときに発火
-    def on_line_tracer_resulted(self, pk: LineTracerResultPacket):
-        if debug:
-            logger.debug("LineTracer: " + str(pk.is_on_line))
-
-        # ライン上にあることが連続で検知されないよう2秒以内に連続で来た場合にははじく
-        if not pk.is_on_line or (int(time.time()) - self.last_line_traced_at < 2):
-            return
-
-        self.last_line_traced_at = int(time.time())
-        robot_manager.stop_measuring_line_tracer()
-
-        if self.state == self.STATE_STAND_BY\
-                or self.state == self.STATE_PHASE_1_TURNED_CORNER_4:
-
-            if self.state == self.STATE_STAND_BY:
-                self.state = self.STATE_PHASE_1_STARTED
-            elif self.STATE_PHASE_1_TURNED_CORNER_4:
-                self.state = self.STATE_PHASE_2_STARTED
-
-            robot_manager.measure(robot_manager.measure_line_tracer, self.on_line_tracer_resulted)
-
-        elif self.state == self.STATE_PHASE_1_STARTED:
-            self.state = self.STATE_PHASE_1_EXCEEDED_HALF_LINE_1
-            robot_manager.measure(robot_manager.measure_distance, self.on_distance_sensor_resulted)
-
-        elif self.state == self.STATE_PHASE_1_TURNED_CORNER_2:
-            self.state = self.STATE_PHASE_1_EXCEEDED_HALF_LINE_2
-            robot_manager.measure(robot_manager.measure_line_tracer, self.on_line_tracer_resulted)
-
-        elif self.state == self.STATE_PHASE_1_EXCEEDED_HALF_LINE_2:
-            self.state = self.STATE_PHASE_1_EXCEEDED_SB_LINE
-            robot_manager.measure(robot_manager.measure_distance, self.on_distance_sensor_resulted)
-
-    # 距離センサの計測が完了したときに発火
-    def on_distance_sensor_resulted(self, pk: DistanceSensorResultPacket):
-        if debug:
-            logger.debug("Distance: " + str(pk.distance))
-        if self.state == self.STATE_PHASE_1_EXCEEDED_HALF_LINE_1:
-            if pk.distance < 1000:
-                robot_manager.stop_measuring_distance()
-                robot_manager.stop()
-                robot_manager.rotate_right()
-                robot_manager.measure(robot_manager.measure_nine_axis, self.on_nine_axis_sensor_resulted)
-
-        elif self.state == self.STATE_PHASE_1_TURNED_CORNER_1:
-            if pk.distance < 1335:
-                robot_manager.stop_measuring_distance()
-                robot_manager.stop()
-                robot_manager.rotate_right()
-                robot_manager.measure(robot_manager.measure_nine_axis, self.on_nine_axis_sensor_resulted)
-
-        elif self.state == self.STATE_PHASE_1_EXCEEDED_SB_LINE:
-            if pk.distance < 700:
-                robot_manager.stop_measuring_distance()
-                robot_manager.stop()
-                robot_manager.rotate_right()
-                robot_manager.measure(robot_manager.measure_nine_axis, self.on_nine_axis_sensor_resulted)
-
-        elif self.state == self.STATE_PHASE_1_TURNED_CORNER_3:
-            if pk.distance < 1335:
-                robot_manager.stop_measuring_distance()
-                robot_manager.stop()
-                robot_manager.rotate_right()
-                robot_manager.measure(robot_manager.measure_nine_axis, self.on_nine_axis_sensor_resulted)
 
     # 状態監視
     def manage_state(self):

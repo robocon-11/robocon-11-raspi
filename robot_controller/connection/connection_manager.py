@@ -5,14 +5,15 @@ import controller_board_manager
 import core
 import logger
 from connection.input_packets import *
-from connection.interface.serial_interface import ConnectionInterface
+from connection.interface.connection_interface import ConnectionInterface
 from connection.interface.serial_interface import SerialInterface
+from connection.interface.web_interface import WebInterface
 from connection.interface.udp_interface import UDPInterface
 from connection.output_packets import OutputPacket
 from connection.packet_event_listener import PacketEventListener
 
 # 通信インターフェース
-connection_interfaces: list = [SerialInterface("/dev/ttyUSB0", "Arduino")]  # UDPInterface("172.20.1.137", 1234, "UDP")
+connection_interfaces: list = [SerialInterface("/dev/ttyUSB0", "Arduino"), WebInterface()]  # UDPInterface("172.20.1.137", 1234, "UDP")
 
 # パケット用イベントリスナ
 event_listener = PacketEventListener()
