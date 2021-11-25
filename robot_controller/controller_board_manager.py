@@ -31,8 +31,6 @@ button_was_held = False
 
 
 def init():
-    threading.Thread(target=_led_scheduler).start()
-
     start_button.when_held = _on_button_held
     start_button.when_deactivated = _on_button_released
     stop_button.when_held = _on_button_held
@@ -98,6 +96,8 @@ def _on_button_released(button: Button):
             logger.info("Process Started.")
             core.running = True
             core.instance = core.Core()
+            threading.Thread(target=_led_scheduler).start()
+
         elif button.pin.number == PIN_BUTTON_STOP:
             logger.critical("Process is stopped by the controller.")
             exit(0)

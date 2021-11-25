@@ -73,4 +73,4 @@ class LSM9D01:
         pass
 
 
-LSM9D01 = LSM9D01()
+# LSM9D01 = LSM9D01()

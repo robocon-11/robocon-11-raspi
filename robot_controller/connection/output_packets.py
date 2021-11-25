@@ -72,11 +72,11 @@ class OutputPacket:
 
 
 def float_to_array(f):
-    return struct.pack(">f", f)
+    return struct.pack("<f", f)
 
 
 def array_to_float(array):
-    return struct.unpack('>f', bytes(array))[0]
+    return struct.unpack('<f', bytes(array))[0]
 
 
 class RightSteppingMotorPacket(OutputPacket):
