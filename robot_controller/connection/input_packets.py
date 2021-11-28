@@ -144,16 +144,40 @@ class BottomServoMotorFeedbackPacket(InputPacket):
 
 class NineAxisSensorResultPacket(InputPacket):
     ID = 80
-    geomagnetism = 0.0  # 地磁気
+    acc_x = 0.0
+    acc_y = 0.0
+    acc_z = 0.0
+    gyro_x = 0.0
+    gyro_y = 0.0
+    gyro_z = 0.0
+    pitch = 0.0
+    roll = 0.0
+    yaw = 0.0
 
     def __init__(self, data):
         super(NineAxisSensorResultPacket, self).__init__(data)
         self.packet_id = self.ID
 
     def decode_packet(self):
-        self.geomagnetism = array_to_float(self.payload[8])
+        self.acc_x = array_to_float(self.payload[0])
+        self.acc_y = array_to_float(self.payload[1])
+        self.acc_z = array_to_float(self.payload[2])
+        self.gyro_x = array_to_float(self.payload[3])
+        self.gyro_y = array_to_float(self.payload[4])
+        self.gyro_z = array_to_float(self.payload[5])
+        self.pitch = array_to_float(self.payload[6])
+        self.roll = array_to_float(self.payload[7])
+        self.yaw = array_to_float(self.payload[8])
 
     def encode_packet(self):
-        self.payload[0] = float_to_array(self.geomagnetism)
+        self.payload[0] = float_to_array(self.gyro_x)
+        self.payload[1] = float_to_array(self.gyro_y)
+        self.payload[2] = float_to_array(self.gyro_z)
+        self.payload[3] = float_to_array(self.acc_x)
+        self.payload[4] = float_to_array(self.acc_y)
+        self.payload[5] = float_to_array(self.acc_z)
+        self.payload[6] = float_to_array(self.pitch)
+        self.payload[7] = float_to_array(self.roll)
+        self.payload[8] = float_to_array(self.yaw)
 
 

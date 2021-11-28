@@ -28,6 +28,10 @@ def init():
     for interface in connection_interfaces:
         interface.init()
 
+    logger.info("Starting packet sender...")
+    th1 = threading.Thread(target=_send_packets)
+    th1.start()
+
     logger.info("Starting packet receiver...")
     th0 = threading.Thread(target=_process_packets)
     th0.start()
@@ -35,10 +39,6 @@ def init():
     for interface in connection_interfaces:
         th = threading.Thread(target=_await_packets, args=(interface,))
         th.start()
-
-    logger.info("Starting packet sender...")
-    th1 = threading.Thread(target=_send_packets)
-    th1.start()
 
 
 # SensorManagerを保持

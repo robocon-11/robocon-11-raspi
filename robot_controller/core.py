@@ -22,7 +22,7 @@ class Core:
     def on_connection_start(self, interface_name):
         logger.info("Successfully connected: {}".format(interface_name))
 
-        if interface_name == "M5Stack" and not self.initialized:
+        if not self.initialized:
             self.initialized = True
             SensorManager() \
                 .set_packet(MeasureNineAxisSensorPacket(robot_manager.unique_id())) \
@@ -32,7 +32,15 @@ class Core:
     # 9軸センサの計測が完了したときに発火
     def on_nine_axis_sensor_resulted(self, pk: NineAxisSensorResultPacket):
         if debug:
-            logger.debug("GeoMagnetism: " + str(pk.geomagnetism))
+            logger.debug("GyroX: " + str(pk.gyro_x))
+            logger.debug("GyroY: " + str(pk.gyro_y))
+            logger.debug("GyroZ: " + str(pk.gyro_z))
+            logger.debug("AccX: " + str(pk.acc_x))
+            logger.debug("AccY: " + str(pk.acc_y))
+            logger.debug("AccZ: " + str(pk.acc_z))
+            logger.debug("Pitch: " + str(pk.pitch))
+            logger.debug("Roll: " + str(pk.roll))
+            logger.debug("Yaw: " + str(pk.yaw))
 
         robot_manager.start()
 

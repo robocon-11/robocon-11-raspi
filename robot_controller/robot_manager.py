@@ -2,8 +2,8 @@ import math
 import threading
 import time
 import logger
-
 import core
+from device_driver import motor_driver
 from connection.input_packets import *
 from connection.output_packets import *
 from connection import connection_manager
@@ -55,6 +55,7 @@ _unique_id = 0  # パケットID
 
 def start():
     threading.Thread(target=_heart_beat).start()
+    motor_driver.init()
 
 
 # センサを計測する
