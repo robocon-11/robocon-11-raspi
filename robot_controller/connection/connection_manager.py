@@ -9,11 +9,13 @@ from connection.interface.connection_interface import ConnectionInterface
 from connection.interface.serial_interface import SerialInterface
 from connection.interface.web_interface import WebInterface
 from connection.interface.udp_interface import UDPInterface
+from connection.interface.internal_interface import InternalInterface
 from connection.output_packets import OutputPacket
 from connection.packet_event_listener import PacketEventListener
 
 # 通信インターフェース
-connection_interfaces: list = [SerialInterface(host="/dev/ttyUSB0", name="M5Stack", baudrate=115200)]  # UDPInterface("172.20.1.137", 1234, "UDP")
+# UDPInterface("172.20.1.137", 1234, "UDP"), SerialInterface(host="/dev/ttyUSB0", name="M5Stack", baudrate=115200)
+connection_interfaces: list = [InternalInterface()]
 
 event_listener = PacketEventListener()  # パケット用イベントリスナ
 received_packets = {}  # 受信したパケットのキュー
