@@ -5,18 +5,21 @@ import controller_board_manager
 import core
 import logger
 from connection.input_packets import *
-from connection.interface.serial_interface import ConnectionInterface
+from connection.interface.connection_interface import ConnectionInterface
 from connection.interface.serial_interface import SerialInterface
+from connection.interface.web_interface import WebInterface
+from connection.interface.udp_interface import UDPInterface
+from connection.interface.internal_interface import InternalInterface
 from connection.output_packets import OutputPacket
 from connection.packet_event_listener import PacketEventListener
 
 # 通信インターフェース
-connection_interfaces: list = [SerialInterface()]
+# UDPInterface("172.20.1.137", 1234, "UDP"), SerialInterface(host="/dev/ttyUSB0", name="M5Stack", baudrate=115200)
+connection_interfaces: list = [InternalInterface()]
 
-# パケット用イベントリスナ
-event_listener = PacketEventListener()
-
-CONNECTION_TIME_OUT = 3  # s
+event_listener = PacketEventListener()  # パケット用イベントリスナ
+received_packets = {}  # 受信したパケットのキュー
+CONNECTION_TIME_OUT = 10  # sec
 
 
 # 初期化
@@ -25,14 +28,17 @@ def init():
     for interface in connection_interfaces:
         interface.init()
 
-    logger.info("Starting packet receiver...")
-    for interface in connection_interfaces:
-        th = threading.Thread(target=_await_packets, args=(interface,))
-        th.start()
-
     logger.info("Starting packet sender...")
     th1 = threading.Thread(target=_send_packets)
     th1.start()
+
+    logger.info("Starting packet receiver...")
+    th0 = threading.Thread(target=_process_packets)
+    th0.start()
+
+    for interface in connection_interfaces:
+        th = threading.Thread(target=_await_packets, args=(interface,))
+        th.start()
 
 
 # SensorManagerを保持
@@ -55,9 +61,8 @@ def _send_packets():
             if not interface.sending_stopped and not len(interface.packet_key_queue) == 0:
                 unique_id = interface.packet_key_queue.pop()
                 pk = interface.packet_queue[unique_id]
-                logger.debug(str(unique_id) + ":" + str(pk.packet_id))
                 _send_packet(interface, pk, True)
-                time.sleep(0.01)  # 10ms待つ
+                # time.sleep(0.001)  # 10ms待つ
 
 
 # パケットを送信
@@ -65,7 +70,6 @@ def _send_packet(interface: ConnectionInterface, pk: OutputPacket, update_time=F
     if core.debug:
         logger.send(
             "(" + interface.get_name() + " / " + str(len(pk.data)) + " / " + str(pk.unique_id) + ") " + bytes(pk.data).hex())
-    logger.state(str(core.instance.state))
 
     controller_board_manager.green_led_on()
 
@@ -75,6 +79,63 @@ def _send_packet(interface: ConnectionInterface, pk: OutputPacket, update_time=F
     if update_time:
         interface.last_sent_packet_unique_id = pk.unique_id
         interface.last_updated_at = time.time()
+
+
+# 送られてきたパケットを処理する
+def _process_packets():
+    while core.running:
+        if len(received_packets) != 0:
+            item = received_packets.popitem()
+            split = item[0].split("0d0a")
+            interface = item[1]
+
+            for text in split:
+                array = bytearray.fromhex(text)
+                string = ""
+
+                try:
+                    string = array.decode(encoding='utf8')
+                except UnicodeDecodeError:
+                    pass
+
+                if interface.is_packet_receiving:
+                    interface.buffer.extend(array)
+                    if len(interface.buffer) == InputPacket.PACKET_LENGTH:
+                        _process_packet(interface.buffer)
+                        interface.buffer.clear()
+                        interface.is_packet_receiving = False
+                        continue
+
+                if string.startswith('>'):
+                    logger.debug_i('(' + interface.get_name() + ') ' + string)
+                    interface.is_debug_receiving = True
+                    continue
+
+                elif len(array) == 0:
+                    continue
+
+                # 受信信号（unique_id）
+                elif len(array) == 4 and int.from_bytes(array, byteorder='big') == interface.last_sent_packet_unique_id:
+                    interface.sending_stopped = False  # パケット送信停止解除
+                    interface.last_updated_at = time.time()  # interfaceの最終更新時間を更新
+                    interface.packet_resent_count = 0  # 再送回数を0に
+                    unique_id = int.from_bytes(array, byteorder='big')
+                    # logger.debug("receive: " + str(unique_id))
+                    del interface.packet_queue[unique_id]
+                    continue
+
+                elif len(array) == InputPacket.PACKET_LENGTH:
+                    _process_packet(array)
+
+                elif not interface.is_packet_receiving \
+                        and int.from_bytes(array[0:2], byteorder='big') in [10, 20, 30, 40, 50, 60, 70, 80]:
+                    interface.is_packet_receiving = True
+                    interface.buffer.extend(array)
+
+                # 予期しないパケットのとき
+                else:
+                    logger.error("(" + interface.get_name() + ") Unexpected Packet Error (" + text + ")")
+                    continue
 
 
 # パケット受信待機
@@ -91,6 +152,7 @@ def _await_packets(interface: ConnectionInterface):
                              "receive the signal 'Stop'.".format(str(interface.last_sent_packet_unique_id), str(
                     interface.packet_queue[interface.last_sent_packet_unique_id].packet_id), interface.get_name(),
                                                                  str(interface.packet_resent_count)))
+                exit()
 
             _send_packet(interface, interface.packet_queue[interface.last_sent_packet_unique_id])  # 再送する
             interface.packet_resent_count += 1
@@ -123,48 +185,38 @@ def _await_packets(interface: ConnectionInterface):
 
         # 受信データを\r\nで区切って処理
         split = str(raw_hex).split("0d0a")
+        start_index = 0
+        end_index = len(split) - 1
 
-        for text in split:
-            array = bytearray.fromhex(text)
-            string = ""
+        # フラグメントバッファが空じゃないとき
+        if len(interface.fragment_buffer) != 0:
+            interface.fragment_buffer += split[0]  # バッファに先頭のデータを追加する
+            if len(split) != 1:  # このパケットに他のパケットがあった場合
+                received_packets[interface.fragment_buffer] = interface  # 集めたパケットの破片は元通りなので正しいパケットとして登録する
+                interface.fragment_buffer = ""  # フラグメントバッファを初期化する
+                start_index = 1  # 先頭のデータはフラグメントだったので次のパケットから読む
 
-            try:
-                string = array.decode(encoding='utf8')
-            except UnicodeDecodeError:
-                pass
+                if not str(raw_hex).endswith("0d0a"):  # 2個以上のパケットを持っており、かつ最後のデータがあるパケットの一部だった場合
+                    interface.fragment_buffer += split[end_index]  # 最後のデータはフラグメントなのでバッファに入れる
+                    end_index -= 1
 
-            # パケット送信停止命令
-            if string.startswith('>'):
-                logger.debug_i('(' + interface.get_name() + ') ' + string)
+            else:  # このパケットがあるパケットの一部だった場合
+                continue  # 次のパケットを読む
+
+        # フラグメントバッファが空のとき
+        else:
+            if len(split) == 1:  # このパケットがあるパケットの一部だった場合
+                interface.fragment_buffer += split[0]  # フラグメントバッファにこのパケットを追加する
                 continue
 
-            elif len(array) == 0:
-                continue
+            elif not str(raw_hex).endswith("0d0a"):  # 2個以上のパケットを持っており、かつ最後のデータがあるパケットの一部だった場合
+                interface.fragment_buffer += split[end_index]  # 最後のデータはフラグメントなのでバッファに入れる
+                end_index -= 1
 
-            # 受信信号（unique_id）
-            elif len(array) == 4 and int.from_bytes(array, byteorder='big') == interface.last_sent_packet_unique_id:
-                interface.sending_stopped = False  # パケット送信停止解除
-                interface.last_updated_at = time.time()  # interfaceの最終更新時間を更新
-                interface.packet_resent_count = 0  # 再送回数を0に
-                unique_id = int.from_bytes(array, byteorder='big')
-                logger.debug("receive: " + str(unique_id))
-                del interface.packet_queue[unique_id]
-                continue
-
-            elif len(array) <= 32 or len(buffer) + len(array) == InputPacket.PACKET_LENGTH:
-                if len(buffer) + len(array) == InputPacket.PACKET_LENGTH:
-                    buffer.extend(array)
-                    _process_packet(buffer)
-                    buffer.clear()
-                else:
-                    buffer.extend(array)
-
-                continue
-
-            # 予期しないパケットのとき
-            else:
-                logger.error("(" + interface.get_name() + ") Unexpected Packet Error (" + string + ")")
-                continue
+        # フラグメントになっていない正しい残りのデータを読む
+        if start_index <= end_index:
+            for i in range(start_index, end_index + 1):
+                received_packets[split[i]] = interface
 
 
 # 受信パケットの処理
@@ -172,6 +224,8 @@ def _process_packet(pk_data):
     try:
         packet = InputPacket(pk_data)
         packet.decode()
+
+        # logger.receive("Packet: {}, Unique ID: {}".format(packet.packet_id, packet.unique_id))
 
         if packet.packet_id == RightSteppingMotorAlertPacket.ID:
             pk = RightSteppingMotorAlertPacket(packet.data)

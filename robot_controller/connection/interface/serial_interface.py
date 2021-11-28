@@ -1,24 +1,23 @@
 import serial
 import logger
-from serial import SerialException
 from connection.interface.connection_interface import ConnectionInterface
 
 
 class SerialInterface(ConnectionInterface):
     ser: serial.Serial
     
-    def __init__(self):
+    def __init__(self, host, name, baudrate=9600):
         super(SerialInterface, self).__init__()
+        self.name = name
+        self.host = host
+        self.baudrate = baudrate
 
     def init(self):
         # ls /devでシリアル通信先を確認!!
-        try:
-            self.ser = serial.Serial('/dev/ttyUSB0', 9600)
-        except SerialException:
-            self.ser = serial.Serial('/dev/ttyUSB1', 9600)
+        self.ser = serial.Serial(self.host, self.baudrate)
 
         if self.ser is None:
-            logger.error("/dev/ttyUSB0 is not found.")
+            logger.error("{} is not found.".format(self.host))
             exit(1)
 
         # self.ser.set_buffer_size(rx_size=4096, tx_size=4096)
@@ -34,4 +33,4 @@ class SerialInterface(ConnectionInterface):
         return self.ser.in_waiting <= 0
 
     def get_name(self):
-        return "SerialInterface"
+        return self.name

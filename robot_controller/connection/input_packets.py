@@ -9,8 +9,8 @@ class InputPacket:
     UNKNOWN_PACKET_ID = -1
     UNKNOWN_UNIQUE_ID = -1
 
-    def __init__(self, data):
-        self.data = data
+    def __init__(self, data: list):
+        self.data: list = data
         self.packet_id = self.UNKNOWN_PACKET_ID
         self.unique_id = self.UNKNOWN_UNIQUE_ID
         self.payload = [[0x00 for _ in range(4)] for _ in range(9)]
@@ -30,9 +30,25 @@ class InputPacket:
 
         self.decode_packet()
 
+    def encode_packet(self):
+        pass
+
+    def encode(self):
+        self.encode_packet()
+
+        self.data.extend(self.packet_id.to_bytes(2, byteorder='big'))
+        self.data.extend(self.unique_id.to_bytes(4, byteorder='big'))
+
+        for p in self.payload:
+            self.data.extend(p)
+
 
 def array_to_float(array):
-    return struct.unpack('>f', bytes(array))[0]
+    return struct.unpack('<f', bytes(array))[0]
+
+
+def float_to_array(f):
+    return struct.pack("<f", f)
 
 
 class RightSteppingMotorAlertPacket(InputPacket):
@@ -40,6 +56,7 @@ class RightSteppingMotorAlertPacket(InputPacket):
 
     def __init__(self, data):
         super(RightSteppingMotorAlertPacket, self).__init__(data)
+        self.packet_id = self.ID
 
 
 class RightSteppingMotorFeedbackPacket(InputPacket):
@@ -47,6 +64,7 @@ class RightSteppingMotorFeedbackPacket(InputPacket):
 
     def __init__(self, data):
         super(RightSteppingMotorFeedbackPacket, self).__init__(data)
+        self.packet_id = self.ID
 
 
 class LeftSteppingMotorAlertPacket(InputPacket):
@@ -54,6 +72,7 @@ class LeftSteppingMotorAlertPacket(InputPacket):
 
     def __init__(self, data):
         super(LeftSteppingMotorAlertPacket, self).__init__(data)
+        self.packet_id = self.ID
 
 
 class LeftSteppingMotorFeedbackPacket(InputPacket):
@@ -61,6 +80,7 @@ class LeftSteppingMotorFeedbackPacket(InputPacket):
 
     def __init__(self, data):
         super(LeftSteppingMotorFeedbackPacket, self).__init__(data)
+        self.packet_id = self.ID
 
 
 class BothSteppingMotorAlertPacket(InputPacket):
@@ -68,6 +88,7 @@ class BothSteppingMotorAlertPacket(InputPacket):
 
     def __init__(self, data):
         super(BothSteppingMotorAlertPacket, self).__init__(data)
+        self.packet_id = self.ID
 
 
 class BothSteppingMotorFeedbackPacket(InputPacket):
@@ -75,6 +96,7 @@ class BothSteppingMotorFeedbackPacket(InputPacket):
 
     def __init__(self, data):
         super(BothSteppingMotorFeedbackPacket, self).__init__(data)
+        self.packet_id = self.ID
 
 
 class DistanceSensorResultPacket(InputPacket):
@@ -83,6 +105,7 @@ class DistanceSensorResultPacket(InputPacket):
 
     def __init__(self, data):
         super(DistanceSensorResultPacket, self).__init__(data)
+        self.packet_id = self.ID
 
     def decode_packet(self):
         self.distance = array_to_float(self.payload[0])
@@ -94,7 +117,8 @@ class LineTracerResultPacket(InputPacket):
 
     def __init__(self, data):
         super(LineTracerResultPacket, self).__init__(data)
-        self.on_line = False
+        self.packet_id = self.ID
+        self.is_on_line = False
 
     def decode_packet(self):
         if self.payload[0][3] == 0x01:
@@ -107,6 +131,7 @@ class UpperServoMotorFeedbackPacket(InputPacket):
 
     def __init__(self, data):
         super(UpperServoMotorFeedbackPacket, self).__init__(data)
+        self.packet_id = self.ID
 
 
 class BottomServoMotorFeedbackPacket(InputPacket):
@@ -114,17 +139,45 @@ class BottomServoMotorFeedbackPacket(InputPacket):
 
     def __init__(self, data):
         super(BottomServoMotorFeedbackPacket, self).__init__(data)
+        self.packet_id = self.ID
 
 
 class NineAxisSensorResultPacket(InputPacket):
     ID = 80
-    geomagnetism = 0.0  # 地磁気
+    acc_x = 0.0
+    acc_y = 0.0
+    acc_z = 0.0
+    gyro_x = 0.0
+    gyro_y = 0.0
+    gyro_z = 0.0
+    pitch = 0.0
+    roll = 0.0
+    yaw = 0.0
 
     def __init__(self, data):
         super(NineAxisSensorResultPacket, self).__init__(data)
+        self.packet_id = self.ID
 
     def decode_packet(self):
-        self.geomagnetism = array_to_float(self.payload[8])
+        self.acc_x = array_to_float(self.payload[0])
+        self.acc_y = array_to_float(self.payload[1])
+        self.acc_z = array_to_float(self.payload[2])
+        self.gyro_x = array_to_float(self.payload[3])
+        self.gyro_y = array_to_float(self.payload[4])
+        self.gyro_z = array_to_float(self.payload[5])
+        self.pitch = array_to_float(self.payload[6])
+        self.roll = array_to_float(self.payload[7])
+        self.yaw = array_to_float(self.payload[8])
 
+    def encode_packet(self):
+        self.payload[0] = float_to_array(self.gyro_x)
+        self.payload[1] = float_to_array(self.gyro_y)
+        self.payload[2] = float_to_array(self.gyro_z)
+        self.payload[3] = float_to_array(self.acc_x)
+        self.payload[4] = float_to_array(self.acc_y)
+        self.payload[5] = float_to_array(self.acc_z)
+        self.payload[6] = float_to_array(self.pitch)
+        self.payload[7] = float_to_array(self.roll)
+        self.payload[8] = float_to_array(self.yaw)
 
 

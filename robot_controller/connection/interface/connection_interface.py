@@ -10,6 +10,10 @@ class ConnectionInterface:
         self.last_updated_at = 0  # パケットを最後に送信した時間
         self.last_sent_packet_unique_id = -1  # 最後に送信したパケットのUnique ID
         self.packet_resent_count = 0  # 最後に送信したパケットを再送した数
+        self.fragment_buffer = ""
+        self.buffer = []
+        self.is_packet_receiving = False
+        self.is_debug_receiving = False
 
     def init(self):
         pass

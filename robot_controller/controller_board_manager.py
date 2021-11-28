@@ -3,14 +3,16 @@ import time
 import core
 import logger
 from gpiozero import LED, Button
+from device_driver import motor_driver
 
 
 PIN_LED_BLUE = 26
-PIN_LED_GREEN = 19
-PIN_LED_RED = 13
+PIN_LED_GREEN = 21
+PIN_LED_RED = 20
 PIN_LED_YELLOW = 6
 PIN_BUTTON_START = 23
 PIN_BUTTON_STOP = 24
+PIN_RESET = 4
 
 
 _blue = LED(PIN_LED_BLUE)
@@ -31,8 +33,6 @@ button_was_held = False
 
 
 def init():
-    threading.Thread(target=_led_scheduler).start()
-
     start_button.when_held = _on_button_held
     start_button.when_deactivated = _on_button_released
     stop_button.when_held = _on_button_held
@@ -98,7 +98,16 @@ def _on_button_released(button: Button):
             logger.info("Process Started.")
             core.running = True
             core.instance = core.Core()
+
+            with LED(PIN_RESET) as reset_pin:
+                reset_pin.on()
+                time.sleep(0.2)
+                reset_pin.off()
+
+            threading.Thread(target=_led_scheduler).start()
+
         elif button.pin.number == PIN_BUTTON_STOP:
             logger.critical("Process is stopped by the controller.")
+            motor_driver.stop()
             exit(0)
     button_was_held = False
