@@ -16,14 +16,18 @@ class Core:
 
     lost_ball = False  # ボールを保持しているかどうか
     last_line_traced_at = 0  # 最後にライン上であることを検出した時間（エポック秒）
+    initialized = False
 
     # 外部インタフェースとの接続が完了したとき
     def on_connection_start(self, interface_name):
-        logger.info("Successfully connected.")
-        SensorManager() \
-            .set_packet(MeasureNineAxisSensorPacket(robot_manager.unique_id())) \
-            .send() \
-            .set_on_receive(lambda pk: self.on_nine_axis_sensor_resulted(pk))
+        logger.info("Successfully connected: {}".format(interface_name))
+
+        if interface_name == "M5Stack" and not self.initialized:
+            self.initialized = True
+            SensorManager() \
+                .set_packet(MeasureNineAxisSensorPacket(robot_manager.unique_id())) \
+                .send() \
+                .set_on_receive(lambda pk: self.on_nine_axis_sensor_resulted(pk))
 
     # 9軸センサの計測が完了したときに発火
     def on_nine_axis_sensor_resulted(self, pk: NineAxisSensorResultPacket):
