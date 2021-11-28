@@ -6,14 +6,15 @@ from connection.interface.connection_interface import ConnectionInterface
 class SerialInterface(ConnectionInterface):
     ser: serial.Serial
     
-    def __init__(self, host, name):
+    def __init__(self, host, name, baudrate=9600):
         super(SerialInterface, self).__init__()
         self.name = name
         self.host = host
+        self.baudrate = baudrate
 
     def init(self):
         # ls /devでシリアル通信先を確認!!
-        self.ser = serial.Serial(self.host, 9600)
+        self.ser = serial.Serial(self.host, self.baudrate)
 
         if self.ser is None:
             logger.error("{} is not found.".format(self.host))

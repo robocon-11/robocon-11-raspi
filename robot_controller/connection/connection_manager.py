@@ -13,12 +13,11 @@ from connection.output_packets import OutputPacket
 from connection.packet_event_listener import PacketEventListener
 
 # 通信インターフェース
-connection_interfaces: list = [SerialInterface("/dev/ttyUSB0", "Arduino")]  # UDPInterface("172.20.1.137", 1234, "UDP")
+connection_interfaces: list = [SerialInterface(host="/dev/ttyUSB0", name="M5Stack", baudrate=115200)]  # UDPInterface("172.20.1.137", 1234, "UDP")
 
-# パケット用イベントリスナ
-event_listener = PacketEventListener()
-received_packets = {}
-CONNECTION_TIME_OUT = 3  # s
+event_listener = PacketEventListener()  # パケット用イベントリスナ
+received_packets = {}  # 受信したパケットのキュー
+CONNECTION_TIME_OUT = 10  # sec
 
 
 # 初期化
@@ -80,6 +79,7 @@ def _send_packet(interface: ConnectionInterface, pk: OutputPacket, update_time=F
         interface.last_updated_at = time.time()
 
 
+# 送られてきたパケットを処理する
 def _process_packets():
     while core.running:
         if len(received_packets) != 0:
