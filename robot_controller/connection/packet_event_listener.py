@@ -1,4 +1,6 @@
+
 import core
+import robot_manager
 
 
 class PacketEventListener:
@@ -37,4 +39,7 @@ class PacketEventListener:
 
     def on_bottom_servo_motor_feedback(self, pk):
         self.managers.pop(pk.unique_id).on_receive(pk)
+
+    def on_sensor_data_resulted(self, pk):
+        robot_manager.on_sensor_data_resulted(pk)
 

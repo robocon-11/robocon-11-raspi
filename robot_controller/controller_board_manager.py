@@ -107,7 +107,8 @@ def _on_button_released(button: Button):
             threading.Thread(target=_led_scheduler).start()
 
         elif button.pin.number == PIN_BUTTON_STOP:
-            logger.critical("Process is stopped by the controller.")
+            core.running = False
             motor_driver.stop()
+            logger.critical("Process is stopped by the controller.")
             exit(0)
     button_was_held = False

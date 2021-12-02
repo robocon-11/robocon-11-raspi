@@ -30,7 +30,11 @@ class InternalInterface(ConnectionInterface):
 
             pk = self.received_packets.pop()
             if pk.packet_id == BothSteppingMotorPacket.ID:
-                pass
+                bsmp = BothSteppingMotorPacket(pk.unique_id)
+                bsmp.data = pk.data
+                bsmp.decode()
+                motor_driver.set_velocity_rate_r(bsmp.value_1 * 1000)
+                motor_driver.set_velocity_rate_l(bsmp.value_3 * 1000)
 
             elif pk.packet_id == LeftSteppingMotorPacket.ID:
                 pass
@@ -39,10 +43,11 @@ class InternalInterface(ConnectionInterface):
                 pass
 
             elif pk.packet_id == MeasureNineAxisSensorPacket.ID:
-                send_pk = NineAxisSensorResultPacket([])
-                send_pk.unique_id = pk.unique_id
-                send_pk.encode()
-                self.put_data(bytes(send_pk.data))
+                p = NineAxisSensorResultPacket([])
+                p.unique_id = pk.unique_id
+                p.encode()
+                self.put_data(p.data)
+                pass
 
             elif pk.packet_id == MeasureLineTracerPacket.ID:
                 pass
@@ -51,7 +56,7 @@ class InternalInterface(ConnectionInterface):
                 pass
 
     def put_data(self, data):
-        self.send_packet_queue.insert(0, data)
+        self.send_packet_queue.insert(0, bytes(data))
         self.send_packet_queue.insert(0, bytes([0x0d, 0x0a]))
 
     # override

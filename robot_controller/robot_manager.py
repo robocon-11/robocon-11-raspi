@@ -15,16 +15,20 @@ STATE_STARTED = 1
 STATE_EXCEEDED_SB_LINE = 2
 STATE_EXCEEDED_HALF_LINE = 3
 
+# 移動モード
+MODE_STRAIGHT = 0
+MODE_PURE_PURSUIT = 1
+
 # 定数
 TIRE_RADIUS = 45.0  # タイヤ半径[mm]
 TIRE_DISTANCE = 175.0  # タイヤ同士の距離[mm]
 ROTATION_DEGREE = 90.0  # 回転時にタイヤが回る角度[deg]
-MAX_ANGULAR_VELOCITY = 1.20 * 1000  # タイヤの最大角速度[deg/s] 14400
-INTERVAL = 0.05  # 計測間隔[s]
+MAX_ANGULAR_VELOCITY = motor_driver.FREQUENCY * motor_driver.STEP_AMOUNT  # タイヤの最大角速度[deg/s] 14400
+INTERVAL = 0.5  # 計測間隔[s] 0.05
 CORN_WIDTH = 380  # カラーコーンの一辺の長さ[mm]
 
 # 自己位置推定（ステージの左上が基準点）
-x = 420.0 + TIRE_DISTANCE / 2  # 自己位置x[mm]
+x = 1100.0  # 自己位置x[mm]
 y = 840.0  # 自己位置y[mm]
 a_v_l = MAX_ANGULAR_VELOCITY  # 左車輪角速度[deg/s]
 a_v_r = MAX_ANGULAR_VELOCITY  # 右車輪角速度[deg/s]
@@ -33,15 +37,19 @@ v_r = 0.0  # 右車輪の設置点での速度[mm/s]
 v = 0.0  # 車速[mm/s]
 w = 0.0  # 旋回角速度（両車輪の中点）[deg/s]
 p = 0.0  # 旋回半径[mm]
-rot = 0.0  # 現在の角度[deg]
+rot = 90.0  # ロボットのx軸に対する角度[deg]
 
 # 仮想ネズミの座標
-mouse_x = 420.0 + TIRE_DISTANCE / 2
-mouse_y = 940.0
+mouse_x = 1100.0
+mouse_y = 1050.0
+mouse_v = 2 * math.pi * TIRE_RADIUS * MAX_ANGULAR_VELOCITY / 360  # (=240.21mm/s)
+mouse_rot = 0.0  # 仮想ネズミのx軸に対する角度 [deg]
+delta = 150  # 仮想ネズミとロボットの間隔 [mm]
 stopped = False  # 仮想ネズミが停止中かどうか
 
 # 状態
 state = STATE_READY  # 現在の処理段階
+mode = MODE_PURE_PURSUIT
 direction = 0.0  # degree
 line_passed_count = 0
 should_update_line = True  # ラインをまたいだことを更新すべきかどうか
@@ -54,8 +62,10 @@ _unique_id = 0  # パケットID
 
 
 def start():
-    threading.Thread(target=_heart_beat).start()
     motor_driver.init()
+    threading.Thread(target=_heart_beat).start()
+    motor_driver.running_r = True
+    motor_driver.running_l = True
 
 
 # センサを計測する
@@ -146,103 +156,87 @@ def on_line_traced(pk: LineTracerResultPacket):
         last_line_traced_at = time.time()
 
 
+def on_sensor_data_resulted(pk: SensorDataPacket):
+    global line_passed_count, last_line_traced_at
+    if pk.line_tracer == 1 and time.time() - last_line_traced_at > 1.5:
+        line_passed_count += 1
+        last_line_traced_at = time.time()
+        logger.debug("Line Traced")
+    logger.debug("Direction: {}".format(pk.dir))
+
+
 def _move_mouse():
-    global mouse_x, mouse_y, v
-    # sigmoid_coefficient = 1485 - (420 + TIRE_DISTANCE / 2 + 400 + CORN_WIDTH / 2)
+    global mouse_x, mouse_y, mouse_rot, v, line_passed_count
+
     if not stopped:
         # 1回目に1つ目のコーナーを曲がる前まではシグモイド関数に沿って移動
-        if (line_passed_count in [0, 1, 2]) and y <= 3740:
-            mouse_y = y + 100
-            mouse_x = -285 / (1 + math.e ** (0.0036 * (mouse_y - 2520))) + 1180
+        if (line_passed_count in [0, 1, 2]) and y <= 3540 and x <= 1485:
+            mouse_x = 1100.0  # -285 / (1 + math.e ** (0.0036 * (mouse_y - 2520))) + 1180
+            mouse_y = 3540.0
 
         # 第1、第2カーブは半円に沿って移動 TODO
-        elif (line_passed_count in [2, 6, 10]) and 3740 <= y:
-            mouse_x = x + 100
-            mouse_y = 3550 - math.sqrt(250000 - (mouse_x - 1680) ** 2)
+        elif (line_passed_count in [2, 6, 10]) and 3540 <= y and x <= 1485:
+            mouse_x = 1485.0 + CORN_WIDTH / 2
+            mouse_y = 5040 - 850.0
 
-            # 1つめのコーナーを曲がっていたら
-            if mouse_x <= 1680:
-                mouse_y += 500
+        elif (line_passed_count in [2, 6, 10]) and 3540 <= y and 1485 <= x:
+            mouse_x = 1485.0 + CORN_WIDTH / 2 + 500
+            mouse_y = 3450.0
 
         # 第2カーブを曲がったらスタートラインに行くまでは直線移動
-        elif (line_passed_count in [2, 3, 6, 7, 10, 11]) and y <= 3740:
-            mouse_x = x
-            mouse_y = y + 100
+        elif (line_passed_count in [2, 3, 6, 7, 10, 11]) and 840 <= y <= 3540:
+            mouse_x = 2180.0
+            mouse_y = 740.0
 
         # 第3, 4カーブも半円に沿って移動 TODO
-        elif (line_passed_count in [3, 4, 7, 8, 11, 12]) and y <= 900:
-            mouse_x = x - 100
-            mouse_y = 900 - math.sqrt(250000 - (mouse_x - 1680) ** 2)
-
-            # 1つめのコーナーを曲がっていたら
-            if mouse_x <= 1680:
-                mouse_y += 500
+        elif (line_passed_count in [3, 4, 7, 8, 11, 12]) and y <= 840 and 1485.0 + CORN_WIDTH / 2 + 400 <= x:
+            mouse_x = 1485.0 + CORN_WIDTH / 2 - 200
+            mouse_y = 500.0
 
         # 第4カーブを曲がったら直線移動
-        elif (line_passed_count in [5, 6, 9, 10]) and y >= 840:
-            mouse_x = x
-            mouse_y = y + 100
+        elif (line_passed_count in [3, 4, 7, 8, 11, 12]) and y <= 840 and x <= 1485.0 + CORN_WIDTH / 2:
+            mouse_x = 1100.0
+            mouse_y = 840.0
+
+        mouse_rot = math.atan2(mouse_y, mouse_x)
 
 
 # 仮想ネズミを追従する
 def _follow_mouse():
-    k_v = 1.0  # 係数1
-    k_t = 0.1  # 係数2
-    k_td = 0.1  # 係数3
     global v_r, v_l, a_v_r, a_v_l, x, y, v, w, p, rot
 
     delta_theta = math.atan2(mouse_y - y, mouse_x - x) - rot
-    delta_v = k_t * delta_theta + k_td * (delta_theta / INTERVAL)
-    v = k_v * math.sqrt((mouse_x - x) ** 2 + (mouse_y - y) ** 2)
-    a_v_r = (v + delta_v) / TIRE_RADIUS
-    a_v_l = (v - delta_v) / TIRE_RADIUS
-    logger.debug(str(a_v_r) + ", " + str(a_v_l))
+    distance = math.hypot(mouse_x - x, mouse_y - y)
+    # rotation_radius = distance / (2 * math.sin(delta_theta))
+    w = 2 * MAX_ANGULAR_VELOCITY * math.sin(delta_theta) / distance
+    rot += w * INTERVAL
+    v_r = (TIRE_DISTANCE / 2) * w + mouse_v
+    v_l = mouse_v - (TIRE_DISTANCE / 2) * w
+    v = (v_r + v_l) / 2
+    a_v_r = math.degrees(v_r / TIRE_RADIUS)
+    a_v_l = math.degrees(v_l / TIRE_RADIUS)
+    x += v * math.cos(rot) * INTERVAL
+    y += v * math.sin(rot) * INTERVAL
+    # logger.debug("mouse: ({}, {})".format(mouse_x, mouse_y))
+    # logger.debug("robot: ({}, {})".format(x, y))
+    logger.debug(str(a_v_l) + ", " + str(a_v_r))
 
     pk = BothSteppingMotorPacket(unique_id())
     pk.direction = BothSteppingMotorPacket.ROTATION_FORWARD
     pk.type = BothSteppingMotorPacket.DATA_TYPE_2
-    pk.value_1 = MAX_ANGULAR_VELOCITY / 1000
-    pk.value_2 = INTERVAL * 6000
-    pk.value_3 = MAX_ANGULAR_VELOCITY / 1000
-    pk.value_4 = INTERVAL * 6000
+    pk.value_1 = a_v_r / 1000
+    pk.value_3 = a_v_l / 1000
     connection_manager.data_packet(pk)
-
-    """
-    r_pk = RightSteppingMotorPacket(unique_id())
-    r_pk.direction = RightSteppingMotorPacket.ROTATION_RIGHT
-    r_pk.type = RightSteppingMotorPacket.DATA_TYPE_1
-    r_pk.value_1 = a_v_r / 1000
-    r_pk.value_2 = INTERVAL * 1000
-    connection_manager.data_packet(r_pk)
-
-    l_pk = LeftSteppingMotorPacket(unique_id())
-    l_pk.direction = LeftSteppingMotorPacket.ROTATION_LEFT
-    l_pk.type = LeftSteppingMotorPacket.DATA_TYPE_1
-    l_pk.value_1 = a_v_l / 1000
-    l_pk.value_2 = INTERVAL * 1000
-    connection_manager.data_packet(l_pk)
-    """
 
 
 # INTERVAL秒起きに実行される
 def _heart_beat():
     while core.running:
-        # 各値の更新
-        global v_r, v_l, a_v_r, a_v_l, x, y, v, w, p, rot
-        v_r = TIRE_RADIUS * math.radians(a_v_r)
-        v_l = TIRE_RADIUS * math.radians(a_v_l)
-        p = TIRE_DISTANCE * (v_r + v_l) / (v_r - v_l) if v_r - v_l != 0 else -1
-        w = (v_r - v_l) / TIRE_DISTANCE
-        v = (v_r + v_l) / 2
-        rot = w * INTERVAL
-        x += v * math.cos(rot)
-        y += v * math.sin(rot)
-
         # measure(method=measure_line_tracer, callback=on_line_traced)  # ライントレーサの計測
-        SensorManager() \
+        """SensorManager() \
             .set_packet(MeasureLineTracerPacket(unique_id())) \
             .send() \
-            .set_on_receive(lambda pk: on_line_traced(pk))
+            .set_on_receive(lambda pk: on_line_traced(pk))"""
 
         _move_mouse()  # 仮想ネズミを動かす
         _follow_mouse()  # 仮想ネズミを追従する

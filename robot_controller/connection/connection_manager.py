@@ -1,16 +1,16 @@
 import threading
 import time
-
+import json
 import controller_board_manager
 import core
 import logger
 from connection.input_packets import *
 from connection.interface.connection_interface import ConnectionInterface
 from connection.interface.serial_interface import SerialInterface
-from connection.interface.web_interface import WebInterface
 from connection.interface.udp_interface import UDPInterface
 from connection.interface.internal_interface import InternalInterface
-from connection.output_packets import OutputPacket
+from connection.output_packets import *
+from connection.input_packets import *
 from connection.packet_event_listener import PacketEventListener
 
 # 通信インターフェース
@@ -81,6 +81,43 @@ def _send_packet(interface: ConnectionInterface, pk: OutputPacket, update_time=F
         interface.last_updated_at = time.time()
 
 
+# json形式のパケットを処理する
+def _handle_json_packet(text: str):
+    json_dict = json.loads(text)
+    pid = int(json_dict['SignalType'])
+    uid = int(json_dict['UniqueID'])
+
+    if pid == NineAxisSensorResultPacket.ID:
+        pk = NineAxisSensorResultPacket([])
+        pk.unique_id = uid
+        pk.acc_x = float(json_dict['AccelX'])
+        pk.acc_y = float(json_dict['AccelY'])
+        pk.acc_z = float(json_dict['AccelZ'])
+        pk.gyro_x = float(json_dict['GyroX'])
+        pk.gyro_y = float(json_dict['GyroY'])
+        pk.gyro_z = float(json_dict['GyroZ'])
+        pk.mag_x = float(json_dict['MagX'])
+        pk.mag_y = float(json_dict['MagY'])
+        pk.mag_z = float(json_dict['MagZ'])
+        pk.encode()
+        _process_packet(pk.data)
+
+    elif pid == SensorDataPacket.ID:
+        pk = SensorDataPacket([])
+        pk.unique_id = uid
+        pk.acc_x = float(json_dict['AccelX'])
+        pk.acc_y = float(json_dict['AccelY'])
+        pk.acc_z = float(json_dict['AccelZ'])
+        pk.gyro_x = float(json_dict['GyroX'])
+        pk.gyro_y = float(json_dict['GyroY'])
+        pk.gyro_z = float(json_dict['GyroZ'])
+        pk.dir = float(json_dict['Direction'])
+        pk.temp = int(json_dict['Temperature'])
+        pk.line_tracer = int(json_dict['LineTracer'])
+        pk.encode()
+        _process_packet(pk.data)
+
+
 # 送られてきたパケットを処理する
 def _process_packets():
     while core.running:
@@ -106,7 +143,11 @@ def _process_packets():
                         interface.is_packet_receiving = False
                         continue
 
-                if string.startswith('>'):
+                if string.startswith('>#'):
+                    _handle_json_packet(string.replace('>#', '').split("\n")[0])
+                    continue
+
+                elif string.startswith('>'):
                     logger.debug_i('(' + interface.get_name() + ') ' + string)
                     interface.is_debug_receiving = True
                     continue

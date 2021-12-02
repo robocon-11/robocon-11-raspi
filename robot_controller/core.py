@@ -38,9 +38,9 @@ class Core:
             logger.debug("AccX: " + str(pk.acc_x))
             logger.debug("AccY: " + str(pk.acc_y))
             logger.debug("AccZ: " + str(pk.acc_z))
-            logger.debug("Pitch: " + str(pk.pitch))
-            logger.debug("Roll: " + str(pk.roll))
-            logger.debug("Yaw: " + str(pk.yaw))
+            logger.debug("Pitch: " + str(pk.mag_x))
+            logger.debug("Roll: " + str(pk.mag_y))
+            logger.debug("Yaw: " + str(pk.mag_z))
 
         robot_manager.start()
 
