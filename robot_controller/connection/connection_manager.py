@@ -15,7 +15,7 @@ from connection.packet_event_listener import PacketEventListener
 
 # 通信インターフェース
 # UDPInterface("172.20.1.137", 1234, "UDP"), SerialInterface(host="/dev/ttyUSB0", name="M5Stack", baudrate=115200)
-connection_interfaces: list = [InternalInterface()]
+connection_interfaces: list = [InternalInterface(), SerialInterface(host="/dev/ttyUSB0", name="M5Stack", baudrate=115200)]
 
 event_listener = PacketEventListener()  # パケット用イベントリスナ
 received_packets = {}  # 受信したパケットのキュー

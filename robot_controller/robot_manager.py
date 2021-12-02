@@ -207,7 +207,7 @@ def _follow_mouse():
 
     delta_theta = math.atan2(mouse_y - y, mouse_x - x) - rot
     distance = math.hypot(mouse_x - x, mouse_y - y)
-    # rotation_radius = distance / (2 * math.sin(delta_theta))
+    #旋回半径 rotation_radius = distance / (2 * math.sin(delta_theta))
     w = 2 * MAX_ANGULAR_VELOCITY * math.sin(delta_theta) / distance
     rot += w * INTERVAL
     v_r = (TIRE_DISTANCE / 2) * w + mouse_v
@@ -217,8 +217,6 @@ def _follow_mouse():
     a_v_l = math.degrees(v_l / TIRE_RADIUS)
     x += v * math.cos(rot) * INTERVAL
     y += v * math.sin(rot) * INTERVAL
-    # logger.debug("mouse: ({}, {})".format(mouse_x, mouse_y))
-    # logger.debug("robot: ({}, {})".format(x, y))
     logger.debug(str(a_v_l) + ", " + str(a_v_r))
 
     pk = BothSteppingMotorPacket(unique_id())
