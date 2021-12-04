@@ -15,7 +15,7 @@ from connection.packet_event_listener import PacketEventListener
 
 # 通信インターフェース
 # UDPInterface("172.20.1.137", 1234, "UDP"), SerialInterface(host="/dev/ttyUSB0", name="M5Stack", baudrate=115200)
-connection_interfaces: list = [InternalInterface()]
+connection_interfaces: list = [InternalInterface(), SerialInterface(host="/dev/ttyUSB0", name="Arduino", baudrate=115200)]
 
 event_listener = PacketEventListener()  # パケット用イベントリスナ
 received_packets = {}  # 受信したパケットのキュー
@@ -87,7 +87,7 @@ def _handle_json_packet(text: str):
     pid = int(json_dict['SignalType'])
     uid = int(json_dict['UniqueID'])
 
-    if pid == NineAxisSensorResultPacket.ID:
+    """if pid == NineAxisSensorResultPacket.ID:
         pk = NineAxisSensorResultPacket([])
         pk.unique_id = uid
         pk.acc_x = float(json_dict['AccelX'])
@@ -100,10 +100,11 @@ def _handle_json_packet(text: str):
         pk.mag_y = float(json_dict['MagY'])
         pk.mag_z = float(json_dict['MagZ'])
         pk.encode()
-        _process_packet(pk.data)
+        _process_packet(pk.data)"""
 
-    elif pid == SensorDataPacket.ID:
+    if pid == SensorDataPacket.ID or pid == NineAxisSensorResultPacket.ID:
         pk = SensorDataPacket([])
+        pk.packet_id = SensorDataPacket.ID
         pk.unique_id = uid
         pk.acc_x = float(json_dict['AccelX'])
         pk.acc_y = float(json_dict['AccelY'])
@@ -115,7 +116,7 @@ def _handle_json_packet(text: str):
         pk.temp = int(json_dict['Temperature'])
         pk.line_tracer = int(json_dict['LineTracer'])
         pk.encode()
-        _process_packet(pk.data)
+        event_listener.on_sensor_data_resulted(pk)
 
 
 # 送られてきたパケットを処理する
@@ -193,9 +194,13 @@ def _await_packets(interface: ConnectionInterface):
                              "receive the signal 'Stop'.".format(str(interface.last_sent_packet_unique_id), str(
                     interface.packet_queue[interface.last_sent_packet_unique_id].packet_id), interface.get_name(),
                                                                  str(interface.packet_resent_count)))
-                exit()
+                interface.packet_resent_count = 0
+                interface.sending_stopped = False
+                interface.packet_queue.clear()
+                interface.packet_key_queue.clear()
+                # exit()
 
-            _send_packet(interface, interface.packet_queue[interface.last_sent_packet_unique_id])  # 再送する
+            # _send_packet(interface, interface.packet_queue[interface.last_sent_packet_unique_id])  # 再送する
             interface.packet_resent_count += 1
 
         if interface.is_waiting():
@@ -311,8 +316,12 @@ def _process_packet(pk_data):
         elif packet.packet_id == BottomServoMotorFeedbackPacket.ID:
             pk = BottomServoMotorFeedbackPacket(packet.data)
             pk.decode()
-
             event_listener.on_bottom_servo_motor_feedback(pk)
+
+        elif packet.packet_id == SensorDataPacket.ID:
+            pk = SensorDataPacket(packet.data)
+            packet.decode()
+            event_listener.on_sensor_data_resulted(pk)
 
     except AssertionError as e:
         logger.error(e)

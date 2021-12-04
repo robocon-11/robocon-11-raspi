@@ -1,6 +1,7 @@
 import pigpio
 import time
 import core
+import logger
 from threading import Thread
 
 # Pin Assigns
@@ -13,7 +14,7 @@ OUTPUTS = [CW_R, CCW_R, CW_L, CCW_L]
 # 定数
 STEP_AMOUNT = 0.018  # 1ステップの角度[deg]
 DUTY = 6500  # Duty比
-FREQUENCY = 17 * (10 ** 3)  # 周波数[Hz]
+FREQUENCY = 18 * (10 ** 3)  # 周波数[Hz]
 
 _velocity_rate_r = 1.0  # 右モータの速度の倍率（0~1）
 _velocity_rate_l = 1.0  # 左モータの速度の倍率（0~1）
@@ -42,7 +43,7 @@ def _th_r_do():
             _pi.hardware_PWM(CW_R, int(FREQUENCY * _velocity_rate_r), DUTY)
         else:
             _pi.hardware_PWM(CW_R, 0, DUTY)
-        time.sleep(0.01)
+        # time.sleep(0.01)
 
 
 def _th_l_do():
@@ -51,7 +52,7 @@ def _th_l_do():
             _pi.hardware_PWM(CCW_L, int(FREQUENCY * _velocity_rate_l), DUTY)
         else:
             _pi.hardware_PWM(CCW_L, 0, DUTY)
-        time.sleep(0.01)
+        # time.sleep(0.01)
 
 
 def init():
@@ -73,35 +74,48 @@ def stop():
 
 # velocity_rate [deg/s]
 def set_velocity_rate_r(velocity_rate: float):
+    logger.debug("R: " + str(velocity_rate))
     global _velocity_rate_r
     vr = velocity_rate / (360 * rps_r)
-    if vr > 1.0:
-        vr = 1.0
     _velocity_rate_r = vr
 
 
 # velocity_rate [deg/s]
 def set_velocity_rate_l(velocity_rate: float):
-    print(velocity_rate)
+    logger.debug("L: " + str(velocity_rate))
     global _velocity_rate_l
     vl = velocity_rate / (360 * rps_r)
-    if vl > 1.0:
-        vl = 1.0
     _velocity_rate_l = vl
 
 
 # TODO 本番では実装しない
 def move_forward():
-    pass
+    global running_l, running_r, _velocity_rate_l, _velocity_rate_r
+    running_l = True
+    running_r = True
+    _velocity_rate_l = 1.0
+    _velocity_rate_r = 1.0
 
 
 def move_backward():
-    pass
+    global running_l, running_r, _velocity_rate_l, _velocity_rate_r
+    running_l = True
+    running_r = True
+    _velocity_rate_l = -1.0
+    _velocity_rate_r = -1.0
 
 
 def move_right():
-    pass
+    global running_l, running_r, _velocity_rate_l, _velocity_rate_r
+    running_l = True
+    running_r = True
+    _velocity_rate_l = 0.9
+    _velocity_rate_r = 0.6
 
 
 def move_left():
-    pass
+    global running_l, running_r, _velocity_rate_l, _velocity_rate_r
+    running_l = True
+    running_r = True
+    _velocity_rate_l = 0.6
+    _velocity_rate_r = 0.9

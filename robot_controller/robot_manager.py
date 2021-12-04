@@ -29,7 +29,7 @@ CORN_WIDTH = 380  # カラーコーンの一辺の長さ[mm]
 
 # 自己位置推定（ステージの左上が基準点）
 x = 1100.0  # 自己位置x[mm]
-y = 840.0  # 自己位置y[mm]
+y = 840.0 - 180.0  # 自己位置y[mm] 180: ロボット先端から車軸までの長さ
 a_v_l = MAX_ANGULAR_VELOCITY  # 左車輪角速度[deg/s]
 a_v_r = MAX_ANGULAR_VELOCITY  # 右車輪角速度[deg/s]
 v_l = 0.0  # 左車輪の設置点での速度[mm/s]
@@ -41,7 +41,7 @@ rot = 90.0  # ロボットのx軸に対する角度[deg]
 
 # 仮想ネズミの座標
 mouse_x = 1100.0
-mouse_y = 1050.0
+mouse_y = 1050.0 - 180.0
 mouse_v = 2 * math.pi * TIRE_RADIUS * MAX_ANGULAR_VELOCITY / 360  # (=240.21mm/s)
 mouse_rot = 0.0  # 仮想ネズミのx軸に対する角度 [deg]
 delta = 150  # 仮想ネズミとロボットの間隔 [mm]
@@ -151,18 +151,19 @@ def update_state():
 # ライントレースが完了したときのコールバック関数
 def on_line_traced(pk: LineTracerResultPacket):
     global last_line_traced_at
-    if time.time() - last_line_traced_at > 1.5 and pk.is_on_line:
-        update_state()
+    if time.time() - last_line_traced_at > 2.0 and pk.is_on_line:
         last_line_traced_at = time.time()
+        update_state()
 
 
 def on_sensor_data_resulted(pk: SensorDataPacket):
     global line_passed_count, last_line_traced_at
-    if pk.line_tracer == 1 and time.time() - last_line_traced_at > 1.5:
+    if pk.line_tracer == 1 and time.time() - last_line_traced_at > 2.0:
         line_passed_count += 1
         last_line_traced_at = time.time()
+        update_state()
         logger.debug("Line Traced")
-    logger.debug("Direction: {}".format(pk.dir))
+    # logger.debug("Direction: {}".format(pk.dir))
 
 
 def _move_mouse():
@@ -170,31 +171,37 @@ def _move_mouse():
 
     if not stopped:
         # 1回目に1つ目のコーナーを曲がる前まではシグモイド関数に沿って移動
-        if (line_passed_count in [0, 1, 2]) and y <= 3540 and x <= 1485:
+        if y <= 3540 and x <= 1485:
+            logger.debug("A")
             mouse_x = 1100.0  # -285 / (1 + math.e ** (0.0036 * (mouse_y - 2520))) + 1180
             mouse_y = 3540.0
 
-        # 第1、第2カーブは半円に沿って移動 TODO
-        elif (line_passed_count in [2, 6, 10]) and 3540 <= y and x <= 1485:
+        # 第1、第2カーブは半円に沿って移動
+        elif 3540 <= y and x <= 1485:
+            logger.debug("B")
             mouse_x = 1485.0 + CORN_WIDTH / 2
             mouse_y = 5040 - 850.0
 
-        elif (line_passed_count in [2, 6, 10]) and 3540 <= y and 1485 <= x:
+        elif 3540 <= y and 1485 <= x:
+            logger.debug("C")
             mouse_x = 1485.0 + CORN_WIDTH / 2 + 500
             mouse_y = 3450.0
 
         # 第2カーブを曲がったらスタートラインに行くまでは直線移動
-        elif (line_passed_count in [2, 3, 6, 7, 10, 11]) and 840 <= y <= 3540:
+        elif 840 <= y <= 3540:
+            logger.debug("D")
             mouse_x = 2180.0
             mouse_y = 740.0
 
         # 第3, 4カーブも半円に沿って移動 TODO
-        elif (line_passed_count in [3, 4, 7, 8, 11, 12]) and y <= 840 and 1485.0 + CORN_WIDTH / 2 + 400 <= x:
+        elif y <= 840 and 1485.0 + CORN_WIDTH / 2 + 400 <= x:
+            logger.debug("E")
             mouse_x = 1485.0 + CORN_WIDTH / 2 - 200
             mouse_y = 500.0
 
         # 第4カーブを曲がったら直線移動
-        elif (line_passed_count in [3, 4, 7, 8, 11, 12]) and y <= 840 and x <= 1485.0 + CORN_WIDTH / 2:
+        elif y <= 840 and x <= 1485.0 + CORN_WIDTH / 2:
+            logger.debug("F")
             mouse_x = 1100.0
             mouse_y = 840.0
 
@@ -219,7 +226,7 @@ def _follow_mouse():
     y += v * math.sin(rot) * INTERVAL
     # logger.debug("mouse: ({}, {})".format(mouse_x, mouse_y))
     # logger.debug("robot: ({}, {})".format(x, y))
-    logger.debug(str(a_v_l) + ", " + str(a_v_r))
+    logger.debug("({}, {})".format(int(x), int(y)))
 
     pk = BothSteppingMotorPacket(unique_id())
     pk.direction = BothSteppingMotorPacket.ROTATION_FORWARD
@@ -232,13 +239,9 @@ def _follow_mouse():
 # INTERVAL秒起きに実行される
 def _heart_beat():
     while core.running:
-        # measure(method=measure_line_tracer, callback=on_line_traced)  # ライントレーサの計測
-        """SensorManager() \
-            .set_packet(MeasureLineTracerPacket(unique_id())) \
-            .send() \
-            .set_on_receive(lambda pk: on_line_traced(pk))"""
-
-        _move_mouse()  # 仮想ネズミを動かす
-        _follow_mouse()  # 仮想ネズミを追従する
+        # _move_mouse()  # 仮想ネズミを動かす
+        # _follow_mouse()  # 仮想ネズミを追従する
+        motor_driver.move_forward()
+        logger.state(str(line_passed_count))
 
         time.sleep(INTERVAL)  # INTERVAL秒待つ

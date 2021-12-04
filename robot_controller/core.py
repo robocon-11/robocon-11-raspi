@@ -3,6 +3,7 @@ import threading
 import time
 import controller_board_manager
 import logger
+from  device_driver import motor_driver
 from sensor.sensor_mamager import SensorManager
 from connection.input_packets import *
 from connection.output_packets import *
@@ -21,6 +22,7 @@ class Core:
     # 外部インタフェースとの接続が完了したとき
     def on_connection_start(self, interface_name):
         logger.info("Successfully connected: {}".format(interface_name))
+
 
         if not self.initialized:
             self.initialized = True
