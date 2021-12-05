@@ -181,7 +181,7 @@ def on_sensor_data_resulted(pk: SensorDataPacket):
     if distance_2 < 100:
         following = False
 
-    if distance_1 < 1000:
+    if distance_1 < 850:
         following = False
 
     if pk.line_tracer == 1 and time.time() - last_line_traced_at > 1.0:
@@ -327,7 +327,6 @@ def _follow_mouse():
 def _heart_beat():
     global t, following, fix_dist
     while core.running:
-        print(distance_1)
         if following:
             # _move_mouse()  # 仮想ネズミを動かす
             # _follow_mouse()  # 仮想ネズミを追従する
@@ -335,7 +334,15 @@ def _heart_beat():
             time.sleep(0.2)
 
         else:
-            if distance_2 < 100:
+            tt = 0
+            while tt <= (math.pi / 2) / ROTATION_W - 0.75:
+                motor_driver.move_right()
+                time.sleep(0.2)
+                tt += 0.2
+            following = True
+
+
+            """if distance_2 < 100:
                 tt = 0
                 while tt <= 0.1:
                     motor_driver.move_right()
@@ -349,4 +356,7 @@ def _heart_beat():
                     motor_driver.move_right()
                     time.sleep(0.2)
                     tt += 0.2
-                following = True
+                following = True"""
+
+        t += 1
+        check_rotation()
