@@ -101,14 +101,16 @@ class BothSteppingMotorFeedbackPacket(InputPacket):
 
 class DistanceSensorResultPacket(InputPacket):
     ID = 40
-    distance = 0.0  # 対面する壁からの距離(mm)
+    distance_1 = 0.0  # 横の壁からの距離(mm)
+    distance_2 = 0.0  # 横の壁からの距離(mm)
 
     def __init__(self, data):
         super(DistanceSensorResultPacket, self).__init__(data)
         self.packet_id = self.ID
 
     def decode_packet(self):
-        self.distance = array_to_float(self.payload[0])
+        self.distance_1 = array_to_float(self.payload[0])
+        self.distance_2 = array_to_float(self.payload[1])
 
 
 class LineTracerResultPacket(InputPacket):
@@ -190,6 +192,8 @@ class SensorDataPacket(InputPacket):
     gyro_y = 0.0
     gyro_z = 0.0
     dir = 0.0
+    distance_1 = 0.0
+    distance_2 = 0.0
     temp = 0.0
     line_tracer = 0  # 0: False, 1: True
 

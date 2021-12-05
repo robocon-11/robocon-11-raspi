@@ -2,6 +2,7 @@ import pigpio
 import time
 import core
 import logger
+import math
 from threading import Thread
 
 # Pin Assigns
@@ -14,14 +15,14 @@ OUTPUTS = [CW_R, CCW_R, CW_L, CCW_L]
 # 定数
 STEP_AMOUNT = 0.018  # 1ステップの角度[deg]
 DUTY = 6500  # Duty比
-FREQUENCY = 18 * (10 ** 3)  # 周波数[Hz]
+FREQUENCY = 16 * (10 ** 3)  # 周波数[Hz]
 
 _velocity_rate_r = 1.0  # 右モータの速度の倍率（0~1）
 _velocity_rate_l = 1.0  # 左モータの速度の倍率（0~1）
 
 # https://www.orientalmotor.co.jp/tech/support_tool/speed/
 rps_r = FREQUENCY * _velocity_rate_r * STEP_AMOUNT / 360  # round per sec (右モータ）
-rps_l = FREQUENCY * _velocity_rate_l * STEP_AMOUNT / 360  # round per sec (左モータ）
+rps_l = FREQUENCY * _velocity_rate_l * STEP_AMOUNT / 360  # round per sec (左モータ)
 
 running_r = False  # 右モータが止まっているかどうか
 running_l = False  # 左モータが止まっているかどうか
@@ -109,8 +110,16 @@ def move_right():
     global running_l, running_r, _velocity_rate_l, _velocity_rate_r
     running_l = True
     running_r = True
-    _velocity_rate_l = 0.9
-    _velocity_rate_r = 0.6
+    _velocity_rate_l = 1.0
+    _velocity_rate_r = 0.5
+
+
+def move(l, r):
+    global running_l, running_r, _velocity_rate_l, _velocity_rate_r
+    running_l = True
+    running_r = True
+    _velocity_rate_l = l
+    _velocity_rate_r = r
 
 
 def move_left():

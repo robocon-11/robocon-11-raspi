@@ -42,4 +42,3 @@ class PacketEventListener:
 
     def on_sensor_data_resulted(self, pk):
         robot_manager.on_sensor_data_resulted(pk)
-

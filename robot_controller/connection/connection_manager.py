@@ -115,7 +115,9 @@ def _handle_json_packet(text: str):
         pk.dir = float(json_dict['Direction'])
         pk.temp = int(json_dict['Temperature'])
         pk.line_tracer = int(json_dict['LineTracer'])
-        pk.encode()
+        pk.distance_1 = float(json_dict['Distance1'])
+        pk.distance_2 = float(json_dict['Distance2'])
+        # pk.encode()
         event_listener.on_sensor_data_resulted(pk)
 
 
