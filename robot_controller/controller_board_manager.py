@@ -34,12 +34,13 @@ button_was_held = False
 
 def init():
     start_button.when_held = _on_button_held
-    start_button.when_deactivated = _on_button_released
     stop_button.when_held = _on_button_held
+    start_button.when_deactivated = _on_button_released
     stop_button.when_deactivated = _on_button_released
 
     red_led_on()
     logger.info("Loaded modules. Process is ready.")
+    _on_button_released(start_button)  # TODO ここ
 
     while not core.running:
         pass

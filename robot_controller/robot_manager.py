@@ -27,7 +27,7 @@ MAX_ANGULAR_VELOCITY = motor_driver.FREQUENCY * motor_driver.STEP_AMOUNT  # タ�
 INTERVAL = 0.5  # 計測間隔[s] 0.05
 CORN_WIDTH = 380  # カラーコーンの一辺の長さ[mm]
 
-MAX_SPEED = motor_driver.FREQUENCY * motor_driver.STEP_AMOUNT / 360 * (2 * math.pi * TIRE_RADIUS)
+MAX_SPEED = (motor_driver.FREQUENCY * motor_driver.STEP_AMOUNT / 360) * (2 * math.pi * TIRE_RADIUS)
 R_VR = MAX_SPEED * 0.5
 L_VR = MAX_SPEED * 1.0
 ROTATION_W = (L_VR - R_VR) / TIRE_DISTANCE
@@ -45,10 +45,12 @@ p = 0.0  # 旋回半径[mm]
 rot = 90.0  # ロボットのx軸に対する角度[deg]
 
 distance_1 = 10000.0
+previous_distance_1 = 100000.0
 distance_2 = 0.0
 distance_2_av = 0.0
 distance_2_buffer = [0.0, 0.0, 0.0]
 fix_dist = 0  # 0 = none, 1 = right, 2 = left
+started_at = 0
 
 # 仮想ネズミの座標
 mouse_x = 1100.0
@@ -77,6 +79,10 @@ _unique_id = 0  # パケットID
 
 def start():
     motor_driver.init()
+
+    global started_at
+    started_at = time.time()
+
     threading.Thread(target=_heart_beat).start()
     motor_driver.running_r = True
     motor_driver.running_l = True
@@ -171,18 +177,20 @@ def on_line_traced(pk: LineTracerResultPacket):
 
 
 def on_sensor_data_resulted(pk: SensorDataPacket):
-    global line_passed_count, last_line_traced_at, distance_1, distance_2, distance_2_buffer, distance_2_av, following, fix_dist
+    global line_passed_count, last_line_traced_at, distance_1, distance_2, distance_2_buffer, distance_2_av, following, previous_distance_1
     distance_1 = pk.distance_1
-    distance_2 = pk.distance_2
+    """distance_2 = pk.distance_2
     distance_2_av = (distance_2_buffer[0] + distance_2_buffer[1] + distance_2_buffer[2]) / 3.0
     distance_2_buffer.pop()
-    distance_2_buffer.insert(0, distance_2)
+    distance_2_buffer.insert(0, distance_2)"""
 
-    if distance_2 < 100:
+    logger.debug("Distance1: {}".format(pk.distance_1))
+    # logger.debug("Distance2: {}".format(pk.distance_2))
+
+    if distance_1 < 850 and abs(previous_distance_1 - distance_1) < 800:
         following = False
 
-    if distance_1 < 850:
-        following = False
+    previous_distance_1 = distance_1
 
     if pk.line_tracer == 1 and time.time() - last_line_traced_at > 1.0:
         line_passed_count += 1
@@ -327,7 +335,7 @@ def _follow_mouse():
 def _heart_beat():
     global t, following, fix_dist
     while core.running:
-        if following:
+        if following or time.time() - started_at < 5:
             # _move_mouse()  # 仮想ネズミを動かす
             # _follow_mouse()  # 仮想ネズミを追従する
             motor_driver.move_forward()
@@ -340,7 +348,6 @@ def _heart_beat():
                 time.sleep(0.2)
                 tt += 0.2
             following = True
-
 
             """if distance_2 < 100:
                 tt = 0

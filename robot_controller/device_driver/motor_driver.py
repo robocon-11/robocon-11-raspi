@@ -89,7 +89,6 @@ def set_velocity_rate_l(velocity_rate: float):
     _velocity_rate_l = vl
 
 
-# TODO 本番では実装しない
 def move_forward():
     global running_l, running_r, _velocity_rate_l, _velocity_rate_r
     running_l = True
